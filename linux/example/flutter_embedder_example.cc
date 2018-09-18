@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <color_panel/color_panel_plugin.h>
+#include <menubar/menubar_plugin.h>
 #include <file_chooser/file_chooser_plugin.h>
 #include <flutter_desktop_embedding/embedder.h>
 
@@ -71,6 +72,7 @@ int main(int argc, char **argv) {
   // Start the engine.
   auto window = flutter_desktop_embedding::CreateFlutterWindowInSnapshotMode(
       640, 480, assets_path, icu_data_path, arguments);
+      plugins_menubar::showMenuBar();
   if (window == nullptr) {
     glfwTerminate();
     return EXIT_FAILURE;
