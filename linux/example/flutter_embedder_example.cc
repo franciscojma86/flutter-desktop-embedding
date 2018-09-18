@@ -76,9 +76,11 @@ int main(int argc, char **argv) {
     glfwTerminate();
     return EXIT_FAILURE;
   }
-  plugins_menubar::showMenuBar();
+  auto menubarPlugin = plugins_menubar::MenuBarPlugin();
+  menubarPlugin->showMenuBar();
 
   // Register any native plugins.
+  // AddPlugin(window, std::make_unique<plugins_menubar::MenuBarPlugin>());
   AddPlugin(window, std::make_unique<plugins_color_panel::ColorPanelPlugin>());
   AddPlugin(window,
             std::make_unique<plugins_file_chooser::FileChooserPlugin>());

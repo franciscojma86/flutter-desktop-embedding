@@ -13,11 +13,24 @@
 // limitations under the License.
 
 #include <menubar/menubar_plugin.h>
+
 #include <gtk/gtk.h>
+
+#include "../common/channel_constants.h"
 
 namespace plugins_menubar {
 
-void showMenuBar() {
+MenuBarPlugin::MenuBarPlugin() : Plugin(kChannelName, false) {}
+
+MenuBarPlugin::~MenuBarPlugin() {}
+
+void HandleMethodCall(const MethodCall &method_call,
+                      std::unique_ptr<MethodResult> result) {
+                          
+                      }
+
+
+void MenuBarPlugin::showMenuBar() {
     GtkWidget *window;
     GtkWidget *vbox;
     GtkWidget *menubar;

@@ -14,8 +14,24 @@
 #ifndef PLUGINS_MENUBAR_LINUX_INCLUDE_MENUBAR_MENUBAR_PLUGIN_H_
 #define PLUGINS_MENUBAR_LINUX_INCLUDE_MENUBAR_MENUBAR_PLUGIN_H_
 
+#include <flutter_desktop_embedding/plugin.h>
+
+class MethodCall;
+class MethodResult;
+
 namespace plugins_menubar {
-    void showMenuBar();
+
+class MenuBarPlugin : public flutter_desktop_embedding::Plugin {
+    public:
+        MenuBarPlugin();
+        virtual ~MenuBarPlugin();
+
+        void showMenuBar();
+        void HandleMethodCall(const MethodCall &method_call,
+                        std::unique_ptr<MethodResult> result) override;
+
+};
+
 }
 
 #endif  // PLUGINS_MENUBAR_LINUX_INCLUDE_MENUBAR_MENUBAR_PLUGIN_H_
