@@ -72,11 +72,11 @@ int main(int argc, char **argv) {
   // Start the engine.
   auto window = flutter_desktop_embedding::CreateFlutterWindowInSnapshotMode(
       640, 480, assets_path, icu_data_path, arguments);
-  plugins_menubar::showMenuBar();
   if (window == nullptr) {
     glfwTerminate();
     return EXIT_FAILURE;
   }
+  plugins_menubar::showMenuBar();
 
   // Register any native plugins.
   AddPlugin(window, std::make_unique<plugins_color_panel::ColorPanelPlugin>());
