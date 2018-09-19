@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     glfwTerminate();
     return EXIT_FAILURE;
   }
-  auto menubarPlugin = plugins_menubar::MenuBarPlugin();
+  auto menubarPlugin = std::make_unique<plugins_menubar::MenuBarPlugin>();
   menubarPlugin->showMenuBar();
 
   // Register any native plugins.

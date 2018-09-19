@@ -16,19 +16,20 @@
 
 #include <gtk/gtk.h>
 
-#include "../common/channel_constants.h"
+#include "../../common/channel_constants.h"
 
 namespace plugins_menubar {
+using flutter_desktop_embedding::JsonMethodCall;
+using flutter_desktop_embedding::MethodResult;
 
-MenuBarPlugin::MenuBarPlugin() : Plugin(kChannelName, false) {}
+MenuBarPlugin::MenuBarPlugin() : JsonPlugin(kChannelName, false) {}
 
 MenuBarPlugin::~MenuBarPlugin() {}
 
-void HandleMethodCall(const MethodCall &method_call,
-                      std::unique_ptr<MethodResult> result) {
-                          
-                      }
-
+void MenuBarPlugin::HandleJsonMethodCall(
+    const JsonMethodCall &method_call, std::unique_ptr<MethodResult> result) {
+     printf("Something");
+}
 
 void MenuBarPlugin::showMenuBar() {
     GtkWidget *window;
@@ -66,4 +67,4 @@ void MenuBarPlugin::showMenuBar() {
     gtk_widget_show_all(window);
 }
 
-}
+} // namespace plugins_menubar

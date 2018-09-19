@@ -14,24 +14,24 @@
 #ifndef PLUGINS_MENUBAR_LINUX_INCLUDE_MENUBAR_MENUBAR_PLUGIN_H_
 #define PLUGINS_MENUBAR_LINUX_INCLUDE_MENUBAR_MENUBAR_PLUGIN_H_
 
-#include <flutter_desktop_embedding/plugin.h>
+#include <flutter_desktop_embedding/json_plugin.h>
 
-class MethodCall;
-class MethodResult;
 
 namespace plugins_menubar {
 
-class MenuBarPlugin : public flutter_desktop_embedding::Plugin {
+class MenuBarPlugin : public flutter_desktop_embedding::JsonPlugin {
     public:
+        // See Plugin for constructor details.
         MenuBarPlugin();
         virtual ~MenuBarPlugin();
 
         void showMenuBar();
-        void HandleMethodCall(const MethodCall &method_call,
-                        std::unique_ptr<MethodResult> result) override;
+        void HandleJsonMethodCall(
+            const flutter_desktop_embedding::JsonMethodCall &method_call,
+            std::unique_ptr<flutter_desktop_embedding::MethodResult> result) override;
 
 };
 
-}
+} // namespace plugins_menubar
 
 #endif  // PLUGINS_MENUBAR_LINUX_INCLUDE_MENUBAR_MENUBAR_PLUGIN_H_
