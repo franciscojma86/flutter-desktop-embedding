@@ -32,9 +32,12 @@ GtkWidget *menubar_window;
 
 void MenuBarPlugin::HandleJsonMethodCall(
     const JsonMethodCall &method_call, std::unique_ptr<MethodResult> result) {
-    if (method_call.method_name().compare("showBar") == 0) {
-      showMenuBar();
-    }
+    if (method_call.method_name().compare(kMenuSetMethod) == 0) {
+      result->Success();
+      showMenuBar(method_call.GetArgumentsAsJson());
+   } else {
+    result->NotImplemented();
+  }
 }
 
   static Json::Value GdkColorToArgs(const GdkRGBA *color) {
@@ -60,10 +63,11 @@ static void RedColorSelected(GtkWidget* menuItem, gpointer* data) {
 
 void MenuBarPlugin::ChangeColor(Json::Value colorArgs) {
   std::cerr << "Change color " << colorArgs;
-  InvokeMethod(kColorSelectedCallbackMethod, colorArgs);
+  // InvokeMethod(kColorSelectedCallbackMethod, colorArgs);
 }
 
-void MenuBarPlugin::showMenuBar() {
+void MenuBarPlugin::showMenuBar(const Json::Value& args) {
+  std::cerr << args;
     if (menubar_window != nullptr) return;
     GtkWidget *vbox;
     GtkWidget *menubar;
