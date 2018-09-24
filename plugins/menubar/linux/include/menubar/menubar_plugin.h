@@ -29,6 +29,7 @@ class MenuBarPlugin : public flutter_desktop_embedding::JsonPlugin {
         void HandleJsonMethodCall(
             const flutter_desktop_embedding::JsonMethodCall &method_call,
             std::unique_ptr<flutter_desktop_embedding::MethodResult> result) override;
+        void ChangeColor(Json::Value colorArgs);
 
 };
 
