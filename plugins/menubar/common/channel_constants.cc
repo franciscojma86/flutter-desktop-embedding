@@ -17,6 +17,13 @@ namespace plugins_menubar {
 
 const char kChannelName[] = "flutter/menubar";
 
-const char kColorSelectedCallbackMethod[] = "Menubar.SelectedCallback";
+const char kMenuSetMethod[] = "Menubar.SetMenu";
+const char kMenuItemSelectedCallbackMethod[] = "Menubar.SelectedCallback";
+
+const char kIdKey[] = "id";
+const char kLabelKey[] = "label";
+const char kEnabledKey[] = "enabled";
+const char kChildrenKey[] = "children";
+const char kDividerKey[] = "isDivider";
 
 }  // namespace plugins_menubar

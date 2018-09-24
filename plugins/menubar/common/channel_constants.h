@@ -22,7 +22,38 @@ namespace plugins_menubar {
 // The name of the plugin's platform channel.
 extern const char kChannelName[];
 
-extern const char kColorSelectedCallbackMethod[];
+// The method name to instruct the native plugin to set the menu.
+//
+// The argument to this method will be an array of JSON representations
+// of menus that should be set as top-level menu items.
+extern const char kMenuSetMethod[];
+// The method name for the Dart-side callback called when a menu item is
+// selected.
+//
+// The argument to this method must be the ID of the selected menu item, as
+// provided in the kIdKey field in the kMenuSetMethod call.
+extern const char kMenuItemSelectedCallbackMethod[];
+
+// Keys for the JSON representations of menus sent to kMenuSetMethod.
+
+// The ID of the menu item, as an integer. If present, this indicates that the
+// menu item should trigger a kMenuItemSelectedCallbackMethod call when
+// selected.
+extern const char kIdKey[];
+
+// The label that should be displayed for the menu, as a string.
+extern const char kLabelKey[];
+
+// Whether or not the menu item should be enabled, as a boolean. If not present
+// the defualt is to enabled the item.
+extern const char kEnabledKey[];
+
+// Menu items that should be shown as a submenu of this item, as an array.
+extern const char kChildrenKey[];
+
+// Whether or not the menu item is a divider, as a boolean. If true, no other
+// keys will be present.
+extern const char kDividerKey[];
 
 }  // namespace plugins_menubar
 
