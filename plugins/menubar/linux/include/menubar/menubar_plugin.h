@@ -16,23 +16,22 @@
 
 #include <flutter_desktop_embedding/json_plugin.h>
 
-
 namespace plugins_menubar {
 
 class MenuBarPlugin : public flutter_desktop_embedding::JsonPlugin {
-    public:
-        // See Plugin for constructor details.
-        MenuBarPlugin();
-        virtual ~MenuBarPlugin();
+ public:
+  // See Plugin for constructor details.
+  MenuBarPlugin();
+  virtual ~MenuBarPlugin();
 
-        void showMenuBar();
-        void HandleJsonMethodCall(
-            const flutter_desktop_embedding::JsonMethodCall &method_call,
-            std::unique_ptr<flutter_desktop_embedding::MethodResult> result) override;
-        void ChangeColor(Json::Value colorArgs);
+  void showMenuBar(const Json::Value &args);
+  void HandleJsonMethodCall(
+      const flutter_desktop_embedding::JsonMethodCall &method_call,
+      std::unique_ptr<flutter_desktop_embedding::MethodResult> result) override;
+  void ChangeColor(Json::Value colorArgs);
 
 };
 
-} // namespace plugins_menubar
+}  // namespace plugins_menubar
 
 #endif  // PLUGINS_MENUBAR_LINUX_INCLUDE_MENUBAR_MENUBAR_PLUGIN_H_
