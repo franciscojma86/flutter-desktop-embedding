@@ -123,29 +123,45 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
     for (Json::Value::const_iterator itr = root.begin(); itr != root.end();
          itr++) {
       if ((*itr).isObject()) {
-        Json::Value object = *itr;
-        // if ((object["label"]).isString()) {
-        //   std::string label = object["label"].asString();
-        // }
-        if ((object["label"]).isString()) {
-          std::string label = object["label"].asString();
-
-          // Json::Value children = object["children"];
-          auto menu = gtk_menu_new();
-          GtkWidget *menuItem = gtk_menu_item_new_with_label(label.c_str());
-          gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
-          // gtk_menu_item_set_submenu(GTK_MENU_ITEM(menu), menubar);
-          gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
-          std::cerr << "Writing\n";
-        } else {
-                    std::cerr << "not\n";
-
-        }
-        // std::cerr << label << std::endl;
-        // GtkWidget *menuItem = gtk_menu_item_new_with_label(label);
+        IterateMenuContents(itr, menubar);
       }
     }
   }
+  std::string label;
+  int menuID;
+  if ((root["label"]).isString()) {
+      label = root["label"].asString();
+      if (root["children"].isArray()) {
+        auto array = root["children"];
+        auto menu = gtk_menu_new();
+        auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+        gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
+        IterateMenuContents(array, menu);
+      } else {
+        auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+        if (root["id"].asInt()) {
+          auto idString = std::to_string(root["id"]);
+          gtk_widget_set_name(isString.c_str());
+        }
+        gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menubar);
+      }
+  }
+
+  if ((root["isDivider"]).isString()) {
+    auto separator = gtk_separator_menu_item_new();
+    gtk_menu_shell_append(GTK_MENU_SHELL(menubar), separator);
+  } 
+  // std::string label = object["label"].asString();
+
+  // // Json::Value children = object["children"];
+  // auto menu = gtk_menu_new();
+  // GtkWidget *menuItem = gtk_menu_item_new_with_label(label.c_str());
+  // gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
+  // // gtk_menu_item_set_submenu(GTK_MENU_ITEM(menu), menubar);
+  // gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
+  // std::cerr << "Writing\n";
+  // std::cerr << label << std::endl;
+  // GtkWidget *menuItem = gtk_menu_item_new_with_label(label);
 
   // for (Json::Value::const_iterator itr = root.begin(); itr != root.end();
   //      itr++) {
