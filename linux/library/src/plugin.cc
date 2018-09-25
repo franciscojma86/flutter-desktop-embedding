@@ -23,6 +23,7 @@ Plugin::Plugin(const std::string &channel, bool input_blocking)
 Plugin::~Plugin() {}
 
 void Plugin::InvokeMethodCall(const MethodCall &method_call) {
+    std::cerr << "Before anything\n";
   if (!engine_) {
       std::cerr << "No engine";
     return;
@@ -36,7 +37,7 @@ void Plugin::InvokeMethodCall(const MethodCall &method_call) {
       .message = message->data(),
       .message_size = message->size(),
   };
-  std::cerr << channel_.c_str();
+  std::cerr << channel_.c_str() << std::endl;
   FlutterEngineSendPlatformMessage(engine_, &platform_message_response);
 }
 

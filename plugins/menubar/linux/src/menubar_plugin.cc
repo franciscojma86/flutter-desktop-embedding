@@ -27,53 +27,141 @@ namespace plugins_menubar {
 using flutter_desktop_embedding::JsonMethodCall;
 using flutter_desktop_embedding::MethodResult;
 
-MenuBarPlugin::MenuBarPlugin() : JsonPlugin(kChannelName, false) {}
+MenuBarPlugin::MenuBarPlugin()
+    : JsonPlugin(kChannelName, false), menubar_(nullptr) {}
 
 MenuBarPlugin::~MenuBarPlugin() {}
 
+class MenuBarPlugin::Menubar {
+ public:
+  explicit Menubar(MenuBarPlugin *parent) {
+    menubar_window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_position(GTK_WINDOW(menubar_window_), GTK_WIN_POS_CENTER);
+    gtk_window_set_default_size(GTK_WINDOW(menubar_window_), 300, 50);
+    gtk_window_set_title(GTK_WINDOW(menubar_window_), kWindowTitle);
+
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_container_add(GTK_CONTAINER(menubar_window_), vbox);
+
+    menubar_ = gtk_menu_bar_new();
+    gtk_box_pack_start(GTK_BOX(vbox), menubar_, FALSE, FALSE, 0);
+
+    gtk_widget_show_all(menubar_window_);
+  }
+  virtual ~Menubar() {
+    if (menubar_window_) {
+      gtk_widget_destroy(menubar_window_);
+      menubar_window_ = nullptr;
+    }
+  }
+
+  GtkWidget *GetRootMenuBar() { return menubar_; }
+
+  static void MenuItemSelected(GtkWidget *menuItem, gpointer *data) {
+    auto plugin = reinterpret_cast<MenuBarPlugin *>(data);
+    Json::Value result;
+    result[kIdKey] = gtk_widget_get_name(menuItem);
+
+    plugin->InvokeMethod(kMenuItemSelectedCallbackMethod, result[kIdKey]);
+  }
+
+  void SetMenuItems(const Json::Value &root,
+                    flutter_desktop_embedding::Plugin *plugin,
+                    GtkWidget *parentWidget) {
+    if (root.isArray()) {
+      unsigned int counter = 0;
+      while (counter < root.size()) {
+        if (root[counter].isObject()) {
+          SetMenuItems(root[counter], plugin, parentWidget);
+          counter++;
+        }
+      }
+      gtk_widget_show_all(menubar_window_);
+
+      return;
+    }
+
+    if ((root["label"]).isString()) {
+      std::string label = root["label"].asString();
+
+      if (root["children"].isArray()) {
+        auto array = root["children"];
+        auto menu = gtk_menu_new();
+        auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+        gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
+        gtk_menu_shell_append(GTK_MENU_SHELL(parentWidget), menuItem);
+
+        SetMenuItems(array, plugin, menu);
+      } else {
+        std::cerr << "no children" << std::endl;
+
+        auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+        if (root["id"].asInt()) {
+          std::string idString = std::to_string(root["id"].asInt());
+          gtk_widget_set_name(menuItem, idString.c_str());
+        }
+        g_signal_connect(G_OBJECT(menuItem), "activate",
+                         G_CALLBACK(MenuItemSelected), plugin);
+        gtk_menu_shell_append(GTK_MENU_SHELL(parentWidget), menuItem);
+      }
+    }
+
+    if (root.get("isDivider", false).asBool()) {
+      auto separator = gtk_separator_menu_item_new();
+      gtk_menu_shell_append(GTK_MENU_SHELL(parentWidget), separator);
+    }
+    gtk_widget_show_all(menubar_window_);
+  }
+
+  void ClearMenuItems() {
+    GList *children, *iter;
+
+    children = gtk_container_get_children(GTK_CONTAINER(menubar_));
+    for (iter = children; iter != NULL; iter = g_list_next(iter))
+      gtk_widget_destroy(GTK_WIDGET(iter->data));
+    g_list_free(children);
+  }
+
+ protected:
+  GtkWidget *menubar_window_;
+  GtkWidget *menubar_;
+};
+
 GtkWidget *menubar_window;
 
-static void IterateMenuContents(const Json::Value &root, GtkWidget *widget);
+static void IterateMenuContents(const Json::Value &root, GtkWidget *widget,
+                                flutter_desktop_embedding::Plugin *plugin);
 
 void MenuBarPlugin::HandleJsonMethodCall(const JsonMethodCall &method_call,
                                          std::unique_ptr<MethodResult> result) {
   if (method_call.method_name().compare(kMenuSetMethod) == 0) {
     result->Success();
-    showMenuBar(method_call.GetArgumentsAsJson());
+    if (menubar_ == nullptr) {
+      menubar_ = std::make_unique<MenuBarPlugin::Menubar>(this);
+    }
+    menubar_->ClearMenuItems();
+    menubar_->SetMenuItems(method_call.GetArgumentsAsJson(), this,
+                           menubar_->GetRootMenuBar());
   } else {
     result->NotImplemented();
   }
 }
 
-// static Json::Value GdkColorToArgs(const GdkRGBA *color) {
-//   Json::Value result;
-//   result["red"] = color->red * color->alpha;
-//   result["green"] = color->green * color->alpha;
-//   result["blue"] = color->blue * color->alpha;
-//   return result;
-// }
+static void MenuItemSelected(GtkWidget *menuItem, gpointer *data) {
+  auto plugin = reinterpret_cast<MenuBarPlugin *>(data);
+  Json::Value result;
+  result[kIdKey] = gtk_widget_get_name(menuItem);
 
-// static void RedColorSelected(GtkWidget *menuItem, gpointer *data) {
-//   auto plugin = reinterpret_cast<MenuBarPlugin *>(data);
-//   GdkRGBA color;
-//   color.red = 1.0;
-//   color.blue = 0.0;
-//   color.green = 0.0;
-//   color.alpha = 1.0;
-//   std::cerr << "Happening";
+  plugin->ChangeColor(result);
+  std::cerr << "Clicked " << gtk_widget_get_name(menuItem);
+}
 
-//   const char *name = gtk_widget_get_name(menuItem);
-//   std::cerr << name;
-//   plugin->ChangeColor(GdkColorToArgs(&color));
-// }
-
-// void MenuBarPlugin::ChangeColor(Json::Value colorArgs) {
-//   std::cerr << "Change color " << colorArgs;
-//   // InvokeMethod(kColorSelectedCallbackMethod, colorArgs);
-// }
+void MenuBarPlugin::ChangeColor(Json::Value colorArgs) {
+  InvokeMethod(kMenuItemSelectedCallbackMethod, colorArgs[kIdKey]);
+}
 
 void MenuBarPlugin::showMenuBar(const Json::Value &args) {
-  std::cerr << args;
+  if (menubar_window != nullptr) return;
   menubar_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_position(GTK_WINDOW(menubar_window), GTK_WIN_POS_CENTER);
   gtk_window_set_default_size(GTK_WINDOW(menubar_window), 300, 50);
@@ -84,83 +172,52 @@ void MenuBarPlugin::showMenuBar(const Json::Value &args) {
   gtk_container_add(GTK_CONTAINER(menubar_window), vbox);
 
   GtkWidget *menubar = gtk_menu_bar_new();
-  IterateMenuContents(args, menubar);
+  IterateMenuContents(args, menubar, this);
   gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
-
-  // fileMenu = gtk_menu_new();
-  // colorMenu = gtk_menu_new();
-
-  // fileMi = gtk_menu_item_new_with_label("File");
-  // quitMi = gtk_menu_item_new_with_label("Quit");
-  // colorMi = gtk_menu_item_new_with_label("Colors");
-  // redMi = gtk_menu_item_new_with_label("Red");
-  // gtk_widget_set_name(redMi, "Hello");
-
-  // gtk_menu_item_set_submenu(GTK_MENU_ITEM(fileMi), fileMenu);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), quitMi);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(menubar), fileMi);
-
-  // g_signal_connect(G_OBJECT(menubar_window), "destroy",
-  //                  G_CALLBACK(gtk_main_quit), NULL);
-
-  // g_signal_connect(G_OBJECT(quitMi), "activate", G_CALLBACK(gtk_main_quit),
-  //                  NULL);
-
-  // gtk_menu_item_set_submenu(GTK_MENU_ITEM(colorMi), colorMenu);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(colorMenu), redMi);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(menubar), colorMi);
-
-  // g_signal_connect(G_OBJECT(redMi), "activate", G_CALLBACK(RedColorSelected),
-  //                  this);
-
-  gtk_widget_show_all(menubar_window);
 }
 
-static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
-  std::cerr << "------Iteratingasdfasfasdfasd \n";
-
+static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar,
+                                flutter_desktop_embedding::Plugin *plugin) {
   if (root.isArray()) {
-    for (Json::Value::const_iterator itr = root.begin(); itr != root.end();
-         itr++) {
-      if ((*itr).isObject()) {
-        Json::Value object = *itr;
-        // if ((object["label"]).isString()) {
-        //   std::string label = object["label"].asString();
-        // }
-        if ((object["label"]).isString()) {
-          std::string label = object["label"].asString();
-
-          // Json::Value children = object["children"];
-          auto menu = gtk_menu_new();
-          GtkWidget *menuItem = gtk_menu_item_new_with_label(label.c_str());
-          gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
-          // gtk_menu_item_set_submenu(GTK_MENU_ITEM(menu), menubar);
-          gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
-          std::cerr << "Writing\n";
-        } else {
-                    std::cerr << "not\n";
-
-        }
-        // std::cerr << label << std::endl;
-        // GtkWidget *menuItem = gtk_menu_item_new_with_label(label);
+    unsigned int counter = 0;
+    while (counter < root.size()) {
+      if (root[counter].isObject()) {
+        IterateMenuContents(root[counter], menubar, plugin);
+        counter++;
       }
+    }
+    return;
+  }
+
+  if ((root["label"]).isString()) {
+    std::string label = root["label"].asString();
+
+    if (root["children"].isArray()) {
+      auto array = root["children"];
+      auto menu = gtk_menu_new();
+      auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+      gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
+      gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
+
+      IterateMenuContents(array, menu, plugin);
+    } else {
+      std::cerr << "no children" << std::endl;
+
+      auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+      if (root["id"].asInt()) {
+        std::string idString = std::to_string(root["id"].asInt());
+        gtk_widget_set_name(menuItem, idString.c_str());
+      }
+      g_signal_connect(G_OBJECT(menuItem), "activate",
+                       G_CALLBACK(MenuItemSelected), plugin);
+      gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
     }
   }
 
-  // for (Json::Value::const_iterator itr = root.begin(); itr != root.end();
-  //      itr++) {
-  //   std::cerr << itr.key() << " " << *itr << std::endl;
-  //   std::cerr << (*itr)["label"] << std::endl;
-
-  //   auto label = (*itr)["children"].isString();
-  //   // if (label != nullptr) {
-  //   std::cerr << label << std::endl;
-  //   // }
-
-  //   std::cerr << "------in\n";
-
-  //   std::cerr << (*itr)["children"] << std::endl;
-  // }
+  if (root.get("isDivider", false).asBool()) {
+    auto separator = gtk_separator_menu_item_new();
+    gtk_menu_shell_append(GTK_MENU_SHELL(menubar), separator);
+  }
 }
 
 }  // namespace plugins_menubar

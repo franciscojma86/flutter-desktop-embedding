@@ -13,8 +13,8 @@
 // limitations under the License.
 #include "linux/library/include/flutter_desktop_embedding/json_plugin.h"
 
+#include <iostream>
 #include "linux/library/include/flutter_desktop_embedding/json_method_codec.h"
-
 namespace flutter_desktop_embedding {
 
 JsonPlugin::JsonPlugin(const std::string &channel, bool input_blocking)
@@ -34,6 +34,8 @@ void JsonPlugin::HandleMethodCall(const MethodCall &method_call,
 
 void JsonPlugin::InvokeMethod(const std::string &method,
                               const Json::Value &arguments) {
+  std::cerr << "In Json Plugin invoke " << method << " " << arguments
+            << std::endl;
   InvokeMethodCall(JsonMethodCall(method, arguments));
 }
 
