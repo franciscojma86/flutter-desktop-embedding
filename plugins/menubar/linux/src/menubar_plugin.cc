@@ -46,7 +46,11 @@ void MenuBarPlugin::HandleJsonMethodCall(const JsonMethodCall &method_call,
 }
 
 static void MenuItemSelected(GtkWidget *menuItem, gpointer *data) {
-  //   // InvokeMethod(kColorSelectedCallbackMethod, colorArgs);
+  auto plugin = reinterpret_cast<MenuBarPlugin>(data);
+  Json::Value result;
+  result[kIdKey] = gtk_widget_get_name(menuItem);
+
+  InvokeMethod(kMenuItemSelectedCallbackMethod, result);
   std::cerr << "Clicked \n" << gtk_widget_get_name(menuItem);
 }
 
