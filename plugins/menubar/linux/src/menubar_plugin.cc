@@ -45,32 +45,10 @@ void MenuBarPlugin::HandleJsonMethodCall(const JsonMethodCall &method_call,
   }
 }
 
-// static Json::Value GdkColorToArgs(const GdkRGBA *color) {
-//   Json::Value result;
-//   result["red"] = color->red * color->alpha;
-//   result["green"] = color->green * color->alpha;
-//   result["blue"] = color->blue * color->alpha;
-//   return result;
-// }
-
-// static void RedColorSelected(GtkWidget *menuItem, gpointer *data) {
-//   auto plugin = reinterpret_cast<MenuBarPlugin *>(data);
-//   GdkRGBA color;
-//   color.red = 1.0;
-//   color.blue = 0.0;
-//   color.green = 0.0;
-//   color.alpha = 1.0;
-//   std::cerr << "Happening";
-
-//   const char *name = gtk_widget_get_name(menuItem);
-//   std::cerr << name;
-//   plugin->ChangeColor(GdkColorToArgs(&color));
-// }
-
-// void MenuBarPlugin::ChangeColor(Json::Value colorArgs) {
-//   std::cerr << "Change color " << colorArgs;
-//   // InvokeMethod(kColorSelectedCallbackMethod, colorArgs);
-// }
+static void MenuItemSelected(GtkWidget *menuItem, gpointer *data) {
+  //   // InvokeMethod(kColorSelectedCallbackMethod, colorArgs);
+  std::cerr << "Clicked \n" << gtk_widget_get_name(menuItem);
+}
 
 void MenuBarPlugin::showMenuBar(const Json::Value &args) {
   std::cerr << args;
@@ -86,32 +64,6 @@ void MenuBarPlugin::showMenuBar(const Json::Value &args) {
   GtkWidget *menubar = gtk_menu_bar_new();
   IterateMenuContents(args, menubar);
   gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
-
-  // fileMenu = gtk_menu_new();
-  // colorMenu = gtk_menu_new();
-
-  // fileMi = gtk_menu_item_new_with_label("File");
-  // quitMi = gtk_menu_item_new_with_label("Quit");
-  // colorMi = gtk_menu_item_new_with_label("Colors");
-  // redMi = gtk_menu_item_new_with_label("Red");
-  // gtk_widget_set_name(redMi, "Hello");
-
-  // gtk_menu_item_set_submenu(GTK_MENU_ITEM(fileMi), fileMenu);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), quitMi);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(menubar), fileMi);
-
-  // g_signal_connect(G_OBJECT(menubar_window), "destroy",
-  //                  G_CALLBACK(gtk_main_quit), NULL);
-
-  // g_signal_connect(G_OBJECT(quitMi), "activate", G_CALLBACK(gtk_main_quit),
-  //                  NULL);
-
-  // gtk_menu_item_set_submenu(GTK_MENU_ITEM(colorMi), colorMenu);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(colorMenu), redMi);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(menubar), colorMi);
-
-  // g_signal_connect(G_OBJECT(redMi), "activate", G_CALLBACK(RedColorSelected),
-  //                  this);
 
   gtk_widget_show_all(menubar_window);
 }
@@ -151,10 +103,12 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
       std::cerr << "no children" << std::endl;
 
       auto menuItem = gtk_menu_item_new_with_label(label.c_str());
-      // if (root["id"].asInt()) {
-      //   std::string idString = std::to_string(root["id"].asInt());
-      //   gtk_widget_set_name( (const gchar *)idString.c_str());
-      // }
+      if (root["id"].asInt()) {
+        std::string idString = std::to_string(root["id"].asInt());
+        gtk_widget_set_name(menuItem, idString.c_str());
+      }
+      g_signal_connect(G_OBJECT(menuItem), "activate",
+                       G_CALLBACK(MenuItemSelected), NULL);
       gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
     }
   }
@@ -165,32 +119,6 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
     auto separator = gtk_separator_menu_item_new();
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), separator);
   }
-  // std::string label = object["label"].asString();
-
-  // // Json::Value children = object["children"];
-  // auto menu = gtk_menu_new();
-  // GtkWidget *menuItem = gtk_menu_item_new_with_label(label.c_str());
-  // gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
-  // // gtk_menu_item_set_submenu(GTK_MENU_ITEM(menu), menubar);
-  // gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
-  // std::cerr << "Writing\n";
-  // std::cerr << label << std::endl;
-  // GtkWidget *menuItem = gtk_menu_item_new_with_label(label);
-
-  // for (Json::Value::const_iterator itr = root.begin(); itr != root.end();
-  //      itr++) {
-  //   std::cerr << itr.key() << " " << *itr << std::endl;
-  //   std::cerr << (*itr)["label"] << std::endl;
-
-  //   auto label = (*itr)["children"].isString();
-  //   // if (label != nullptr) {
-  //   std::cerr << label << std::endl;
-  //   // }
-
-  //   std::cerr << "------in\n";
-
-  //   std::cerr << (*itr)["children"] << std::endl;
-  // }
 }  // namespace plugins_menubar
 
 }  // namespace plugins_menubar
