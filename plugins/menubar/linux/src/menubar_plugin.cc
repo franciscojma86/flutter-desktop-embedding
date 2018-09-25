@@ -46,12 +46,16 @@ void MenuBarPlugin::HandleJsonMethodCall(const JsonMethodCall &method_call,
 }
 
 static void MenuItemSelected(GtkWidget *menuItem, gpointer *data) {
-  auto plugin = reinterpret_cast<MenuBarPlugin>(data);
+  auto plugin = reinterpret_cast<MenuBarPlugin *>(data);
   Json::Value result;
   result[kIdKey] = gtk_widget_get_name(menuItem);
 
-  InvokeMethod(kMenuItemSelectedCallbackMethod, result);
+  plugin->ChangeColor(result);
   std::cerr << "Clicked \n" << gtk_widget_get_name(menuItem);
+}
+
+void MenuBarPlugin::ChangeColor(Json::Value colorArgs) {
+  InvokeMethod(kMenuItemSelectedCallbackMethod);
 }
 
 void MenuBarPlugin::showMenuBar(const Json::Value &args) {
@@ -87,7 +91,6 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
     return;
   }
 
-  // int menuID;
   if ((root["label"]).isString()) {
     std::string label = root["label"].asString();
     std::cerr << "has label: " << label << std::endl;
@@ -123,6 +126,6 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
     auto separator = gtk_separator_menu_item_new();
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), separator);
   }
-}  // namespace plugins_menubar
+} 
 
 }  // namespace plugins_menubar
