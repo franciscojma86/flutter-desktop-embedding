@@ -117,40 +117,54 @@ void MenuBarPlugin::showMenuBar(const Json::Value &args) {
 }
 
 static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
-  std::cerr << "------Iteratingasdfasfasdfasd \n";
-
   if (root.isArray()) {
-    for (Json::Value::const_iterator itr = root.begin(); itr != root.end();
-         itr++) {
-      if ((*itr).isObject()) {
-        IterateMenuContents(itr, menubar);
+    std::cerr << "Is array " << root.size() << std::endl;
+    unsigned int counter = 0;
+    while (counter < root.size()) {
+      if (root[counter].isObject()) {
+        std::cerr << "Is object \n";
+        IterateMenuContents(root[counter], menubar);
+        counter++;
+        std::cerr << "FINISHED \n";
       }
     }
-  }
-  std::string label;
-  int menuID;
-  if ((root["label"]).isString()) {
-      label = root["label"].asString();
-      if (root["children"].isArray()) {
-        auto array = root["children"];
-        auto menu = gtk_menu_new();
-        auto menuItem = gtk_menu_item_new_with_label(label.c_str());
-        gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
-        IterateMenuContents(array, menu);
-      } else {
-        auto menuItem = gtk_menu_item_new_with_label(label.c_str());
-        if (root["id"].asInt()) {
-          auto idString = std::to_string(root["id"]);
-          gtk_widget_set_name(isString.c_str());
-        }
-        gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menubar);
-      }
+    return;
   }
 
-  if ((root["isDivider"]).isString()) {
+  // int menuID;
+  if ((root["label"]).isString()) {
+    std::string label = root["label"].asString();
+    std::cerr << "has label: " << label << std::endl;
+
+    if (root["children"].isArray()) {
+      std::cerr << "has children" << std::endl;
+
+      auto array = root["children"];
+      std::cerr << array << std::endl;
+      auto menu = gtk_menu_new();
+      auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+      gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
+      gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
+
+      IterateMenuContents(array, menu);
+    } else {
+      std::cerr << "no children" << std::endl;
+
+      auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+      // if (root["id"].asInt()) {
+      //   std::string idString = std::to_string(root["id"].asInt());
+      //   gtk_widget_set_name( (const gchar *)idString.c_str());
+      // }
+      gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
+    }
+  }
+
+  if (root.get("isDivider", false).asBool()) {
+    std::cerr << "is divider" << std::endl;
+
     auto separator = gtk_separator_menu_item_new();
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), separator);
-  } 
+  }
   // std::string label = object["label"].asString();
 
   // // Json::Value children = object["children"];
@@ -177,6 +191,6 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
 
   //   std::cerr << (*itr)["children"] << std::endl;
   // }
-}
+}  // namespace plugins_menubar
 
 }  // namespace plugins_menubar
