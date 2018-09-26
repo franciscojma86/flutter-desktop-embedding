@@ -37,7 +37,7 @@ void Plugin::InvokeMethodCall(const MethodCall &method_call) {
       .message = message->data(),
       .message_size = message->size(),
   };
-  std::cerr << channel_.c_str();
+  std::cerr << channel_.c_str() << std::endl;
   FlutterEngineSendPlatformMessage(engine_, &platform_message_response);
 }
 

@@ -52,15 +52,15 @@ static void MenuItemSelected(GtkWidget *menuItem, gpointer *data) {
   result[kIdKey] = gtk_widget_get_name(menuItem);
 
   plugin->ChangeColor(result);
-  std::cerr << "Clicked \n" << gtk_widget_get_name(menuItem);
+  std::cerr << "Clicked " << gtk_widget_get_name(menuItem);
 }
 
 void MenuBarPlugin::ChangeColor(Json::Value colorArgs) {
-  InvokeMethod(kMenuItemSelectedCallbackMethod, colorArgs);
+  InvokeMethod(kMenuItemSelectedCallbackMethod, colorArgs[kIdKey]);
 }
 
 void MenuBarPlugin::showMenuBar(const Json::Value &args) {
-  std::cerr << args;
+if (menubar_window != nullptr) return;
   menubar_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_position(GTK_WINDOW(menubar_window), GTK_WIN_POS_CENTER);
   gtk_window_set_default_size(GTK_WINDOW(menubar_window), 300, 50);
@@ -80,14 +80,11 @@ void MenuBarPlugin::showMenuBar(const Json::Value &args) {
 static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar,
                                 flutter_desktop_embedding::Plugin *plugin) {
   if (root.isArray()) {
-    std::cerr << "Is array " << root.size() << std::endl;
     unsigned int counter = 0;
     while (counter < root.size()) {
       if (root[counter].isObject()) {
-        std::cerr << "Is object \n";
         IterateMenuContents(root[counter], menubar, plugin);
         counter++;
-        std::cerr << "FINISHED \n";
       }
     }
     return;
@@ -95,10 +92,8 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar,
 
   if ((root["label"]).isString()) {
     std::string label = root["label"].asString();
-    std::cerr << "has label: " << label << std::endl;
 
     if (root["children"].isArray()) {
-      std::cerr << "has children" << std::endl;
 
       auto array = root["children"];
       auto menu = gtk_menu_new();
@@ -122,8 +117,6 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar,
   }
 
   if (root.get("isDivider", false).asBool()) {
-    std::cerr << "is divider" << std::endl;
-
     auto separator = gtk_separator_menu_item_new();
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), separator);
   }

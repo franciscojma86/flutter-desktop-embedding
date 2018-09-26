@@ -61,7 +61,6 @@ class MenuChannel {
   /// For instance, special menus that are handled entirely on the native
   /// side might be added to the provided menus.
   Future<Null> setMenu(List<Submenu> menus) async {
-    print("Setting menu");
     try {
       _updateInProgress = true;
       await _platformChannel.invokeMethod(
@@ -145,9 +144,17 @@ class MenuChannel {
 
   /// Mediates between the platform channel callback and the client callback.
   Future<Null> _callbackHandler(MethodCall methodCall) async {
+
+    print("Callback $methodCall");
+
     if (methodCall.method == _kMenuItemSelectedCallbackMethod) {
+      print("Inside if");
       try {
+           print("Inside try");
+
         if (_updateInProgress) {
+                print("Inside uopdate");
+
           // Drop stale callbacks.
           // TODO: Evaluate whether this works in practice, or if races are
           // regular occurences that clients will need to be prepared to
@@ -156,10 +163,18 @@ class MenuChannel {
               'Warning: Menu selection callback received during menu update.');
           return;
         }
-        final int menuItemId = methodCall.arguments;
+              print("Oustside if");
+
+        final int menuItemId = int.parse(methodCall.arguments);
+        
+        print("Item id $menuItemId"); 
         print("Before testing callbacks");
-        _selectionCallbacks[menuItemId]();
+        MenuSelectedCallback c =_selectionCallbacks[menuItemId];
+        print(c);
+        c();
       } on Exception catch (e, s) {
+        print("Exception");
+        
         print('Exception in callback handler: $e\n$s');
       }
     }
