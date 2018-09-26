@@ -61,6 +61,7 @@ class MenuChannel {
   /// For instance, special menus that are handled entirely on the native
   /// side might be added to the provided menus.
   Future<Null> setMenu(List<Submenu> menus) async {
+    print("Setting menu");
     try {
       _updateInProgress = true;
       await _platformChannel.invokeMethod(
