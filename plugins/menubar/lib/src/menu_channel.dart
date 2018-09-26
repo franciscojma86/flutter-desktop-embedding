@@ -156,6 +156,7 @@ class MenuChannel {
           return;
         }
         final int menuItemId = methodCall.arguments;
+        print("Before testing callbacks");
         _selectionCallbacks[menuItemId]();
       } on Exception catch (e, s) {
         print('Exception in callback handler: $e\n$s');

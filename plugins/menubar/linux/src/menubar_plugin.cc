@@ -33,7 +33,8 @@ MenuBarPlugin::~MenuBarPlugin() {}
 
 GtkWidget *menubar_window;
 
-static void IterateMenuContents(const Json::Value &root, GtkWidget *widget);
+static void IterateMenuContents(const Json::Value &root, GtkWidget *widget,
+                                flutter_desktop_embedding::Plugin *plugin);
 
 void MenuBarPlugin::HandleJsonMethodCall(const JsonMethodCall &method_call,
                                          std::unique_ptr<MethodResult> result) {
@@ -55,7 +56,7 @@ static void MenuItemSelected(GtkWidget *menuItem, gpointer *data) {
 }
 
 void MenuBarPlugin::ChangeColor(Json::Value colorArgs) {
-  InvokeMethod(kMenuItemSelectedCallbackMethod);
+  InvokeMethod(kMenuItemSelectedCallbackMethod, colorArgs);
 }
 
 void MenuBarPlugin::showMenuBar(const Json::Value &args) {
@@ -70,20 +71,21 @@ void MenuBarPlugin::showMenuBar(const Json::Value &args) {
   gtk_container_add(GTK_CONTAINER(menubar_window), vbox);
 
   GtkWidget *menubar = gtk_menu_bar_new();
-  IterateMenuContents(args, menubar);
+  IterateMenuContents(args, menubar, this);
   gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
 
   gtk_widget_show_all(menubar_window);
 }
 
-static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
+static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar,
+                                flutter_desktop_embedding::Plugin *plugin) {
   if (root.isArray()) {
     std::cerr << "Is array " << root.size() << std::endl;
     unsigned int counter = 0;
     while (counter < root.size()) {
       if (root[counter].isObject()) {
         std::cerr << "Is object \n";
-        IterateMenuContents(root[counter], menubar);
+        IterateMenuContents(root[counter], menubar, plugin);
         counter++;
         std::cerr << "FINISHED \n";
       }
@@ -99,13 +101,12 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
       std::cerr << "has children" << std::endl;
 
       auto array = root["children"];
-      std::cerr << array << std::endl;
       auto menu = gtk_menu_new();
       auto menuItem = gtk_menu_item_new_with_label(label.c_str());
       gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
       gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
 
-      IterateMenuContents(array, menu);
+      IterateMenuContents(array, menu, plugin);
     } else {
       std::cerr << "no children" << std::endl;
 
@@ -115,7 +116,7 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
         gtk_widget_set_name(menuItem, idString.c_str());
       }
       g_signal_connect(G_OBJECT(menuItem), "activate",
-                       G_CALLBACK(MenuItemSelected), NULL);
+                       G_CALLBACK(MenuItemSelected), plugin);
       gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuItem);
     }
   }
@@ -126,6 +127,6 @@ static void IterateMenuContents(const Json::Value &root, GtkWidget *menubar) {
     auto separator = gtk_separator_menu_item_new();
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), separator);
   }
-} 
+}
 
 }  // namespace plugins_menubar
