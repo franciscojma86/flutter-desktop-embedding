@@ -30,7 +30,9 @@ MenuBarPlugin::MenuBarPlugin()
 
 MenuBarPlugin::~MenuBarPlugin() {}
 
-// Class containing the implementation of the Menubar widget.
+// Class containing the implementation of the Menubar widget. This is currently
+// a floating GTK window, separate from the main app. This is not the optimal
+// solution.
 class MenuBarPlugin::Menubar {
  public:
   explicit Menubar(MenuBarPlugin *parent) {
@@ -59,7 +61,7 @@ class MenuBarPlugin::Menubar {
     auto plugin = reinterpret_cast<MenuBarPlugin *>(data);
 
     plugin->InvokeMethod(kMenuItemSelectedCallbackMethod,
-                         gtk_widget_get_name(menuItem));
+                         std::stoi(gtk_widget_get_name(menuItem)));
   }
 
   // Create the menu items heirarchy from a given Json object.
