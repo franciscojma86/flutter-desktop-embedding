@@ -14,6 +14,7 @@
 #include "linux/library/include/flutter_desktop_embedding/json_plugin.h"
 
 #include "linux/library/include/flutter_desktop_embedding/json_method_codec.h"
+
 namespace flutter_desktop_embedding {
 
 JsonPlugin::JsonPlugin(const std::string &channel, bool input_blocking)
