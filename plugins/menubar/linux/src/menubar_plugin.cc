@@ -16,8 +16,6 @@
 
 #include <gtk/gtk.h>
 #include <stdio.h>
-#include <iostream>
-#include <typeinfo>
 
 #include "../../common/channel_constants.h"
 
@@ -32,6 +30,7 @@ MenuBarPlugin::MenuBarPlugin()
 
 MenuBarPlugin::~MenuBarPlugin() {}
 
+// Class containing the implementation of the Menubar widget.
 class MenuBarPlugin::Menubar {
  public:
   explicit Menubar(MenuBarPlugin *parent) {
@@ -45,8 +44,6 @@ class MenuBarPlugin::Menubar {
 
     menubar_ = gtk_menu_bar_new();
     gtk_box_pack_start(GTK_BOX(vbox), menubar_, FALSE, FALSE, 0);
-
-    gtk_widget_show_all(menubar_window_);
   }
   virtual ~Menubar() {
     if (menubar_window_) {
@@ -55,20 +52,23 @@ class MenuBarPlugin::Menubar {
     }
   }
 
+  // Get the top level menubar widget.
   GtkWidget *GetRootMenuBar() { return menubar_; }
 
   static void MenuItemSelected(GtkWidget *menuItem, gpointer *data) {
     auto plugin = reinterpret_cast<MenuBarPlugin *>(data);
-    Json::Value result;
-    result[kIdKey] = gtk_widget_get_name(menuItem);
 
-    plugin->InvokeMethod(kMenuItemSelectedCallbackMethod, result[kIdKey]);
+    plugin->InvokeMethod(kMenuItemSelectedCallbackMethod,
+                         gtk_widget_get_name(menuItem));
   }
 
+  // Create the menu items heirarchy from a given Json object.
   void SetMenuItems(const Json::Value &root,
                     flutter_desktop_embedding::Plugin *plugin,
                     GtkWidget *parentWidget) {
     if (root.isArray()) {
+      // This is the base of Json tree. It's not a menu item itself, so there's
+      // no need to create a widget.
       unsigned int counter = 0;
       while (counter < root.size()) {
         if (root[counter].isObject()) {
@@ -81,28 +81,31 @@ class MenuBarPlugin::Menubar {
       return;
     }
 
-    if ((root["label"]).isString()) {
-      std::string label = root["label"].asString();
+    if ((root[kLabelKey]).isString()) {
+      std::string label = root[kLabelKey].asString();
 
-      if (root["children"].isArray()) {
-        auto array = root["children"];
+      if (root[kChildrenKey].isArray()) {
+        // A parent menu item. Create a widget with its label and then build the
+        // children.
+        auto array = root[kChildrenKey];
         auto menu = gtk_menu_new();
         auto menuItem = gtk_menu_item_new_with_label(label.c_str());
-        
-        if (root["enabled"].isBool()) {
-          gtk_widget_set_sensitive(menuItem, root["enabled"].asBool());
+
+        if (root[kEnabledKey].isBool()) {
+          gtk_widget_set_sensitive(menuItem, root[kEnabledKey].asBool());
         }
         gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
         gtk_menu_shell_append(GTK_MENU_SHELL(parentWidget), menuItem);
 
         SetMenuItems(array, plugin, menu);
       } else {
+        // A leaf menu item. Only these items will have a callback.
         auto menuItem = gtk_menu_item_new_with_label(label.c_str());
-        if (root["enabled"].isBool()) {
-          gtk_widget_set_sensitive(menuItem, root["enabled"].asBool());
+        if (root[kEnabledKey].isBool()) {
+          gtk_widget_set_sensitive(menuItem, root[kEnabledKey].asBool());
         }
-        if (root["id"].asInt()) {
-          std::string idString = std::to_string(root["id"].asInt());
+        if (root[kIdKey].asInt()) {
+          std::string idString = std::to_string(root[kIdKey].asInt());
           gtk_widget_set_name(menuItem, idString.c_str());
         }
         g_signal_connect(G_OBJECT(menuItem), "activate",
@@ -111,19 +114,21 @@ class MenuBarPlugin::Menubar {
       }
     }
 
-    if (root.get("isDivider", false).asBool()) {
+    if (root.get(kDividerKey, false).asBool()) {
       auto separator = gtk_separator_menu_item_new();
       gtk_menu_shell_append(GTK_MENU_SHELL(parentWidget), separator);
     }
     gtk_widget_show_all(menubar_window_);
   }
 
+  // Remove all items from the menubar.
   void ClearMenuItems() {
     GList *children, *iter;
 
     children = gtk_container_get_children(GTK_CONTAINER(menubar_));
-    for (iter = children; iter != NULL; iter = g_list_next(iter))
+    for (iter = children; iter != NULL; iter = g_list_next(iter)) {
       gtk_widget_destroy(GTK_WIDGET(iter->data));
+    }
     g_list_free(children);
   }
 
@@ -139,8 +144,9 @@ void MenuBarPlugin::HandleJsonMethodCall(const JsonMethodCall &method_call,
     if (menubar_ == nullptr) {
       menubar_ = std::make_unique<MenuBarPlugin::Menubar>(this);
     }
+    // The menubar will be redrawn after every interaction. Clear items to avoid
+    // duplication.
     menubar_->ClearMenuItems();
-    std::cerr << method_call.GetArgumentsAsJson();
     menubar_->SetMenuItems(method_call.GetArgumentsAsJson(), this,
                            menubar_->GetRootMenuBar());
   } else {
