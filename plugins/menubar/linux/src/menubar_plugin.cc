@@ -127,11 +127,6 @@ class MenuBarPlugin::Menubar {
   GtkWidget *menubar_;
 };
 
-GtkWidget *menubar_window;
-
-static void IterateMenuContents(const Json::Value &root, GtkWidget *widget,
-                                flutter_desktop_embedding::Plugin *plugin);
-
 void MenuBarPlugin::HandleJsonMethodCall(const JsonMethodCall &method_call,
                                          std::unique_ptr<MethodResult> result) {
   if (method_call.method_name().compare(kMenuSetMethod) == 0) {
