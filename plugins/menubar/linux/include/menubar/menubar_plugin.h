@@ -30,6 +30,9 @@ class MenuBarPlugin : public flutter_desktop_embedding::JsonPlugin {
       std::unique_ptr<flutter_desktop_embedding::MethodResult> result) override;
   void ChangeColor(Json::Value colorArgs);
 
+ private:
+  class Menubar;
+  std::unique_ptr<Menubar> menubar_;
 };
 
 }  // namespace plugins_menubar
