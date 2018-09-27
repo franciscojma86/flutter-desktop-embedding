@@ -88,12 +88,19 @@ class MenuBarPlugin::Menubar {
         auto array = root["children"];
         auto menu = gtk_menu_new();
         auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+        
+        if (root["enabled"].isBool()) {
+          gtk_widget_set_sensitive(menuItem, root["enabled"].asBool());
+        }
         gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
         gtk_menu_shell_append(GTK_MENU_SHELL(parentWidget), menuItem);
 
         SetMenuItems(array, plugin, menu);
       } else {
         auto menuItem = gtk_menu_item_new_with_label(label.c_str());
+        if (root["enabled"].isBool()) {
+          gtk_widget_set_sensitive(menuItem, root["enabled"].asBool());
+        }
         if (root["id"].asInt()) {
           std::string idString = std::to_string(root["id"].asInt());
           gtk_widget_set_name(menuItem, idString.c_str());
@@ -133,6 +140,7 @@ void MenuBarPlugin::HandleJsonMethodCall(const JsonMethodCall &method_call,
       menubar_ = std::make_unique<MenuBarPlugin::Menubar>(this);
     }
     menubar_->ClearMenuItems();
+    std::cerr << method_call.GetArgumentsAsJson();
     menubar_->SetMenuItems(method_call.GetArgumentsAsJson(), this,
                            menubar_->GetRootMenuBar());
   } else {
