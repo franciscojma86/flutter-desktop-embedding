@@ -14,7 +14,7 @@
 #include "linux/library/include/flutter_desktop_embedding/plugin.h"
 
 #include "linux/library/include/flutter_desktop_embedding/json_method_codec.h"
-#include <iostream>
+
 namespace flutter_desktop_embedding {
 
 Plugin::Plugin(const std::string &channel, bool input_blocking)
@@ -23,12 +23,9 @@ Plugin::Plugin(const std::string &channel, bool input_blocking)
 Plugin::~Plugin() {}
 
 void Plugin::InvokeMethodCall(const MethodCall &method_call) {
-    std::cerr << "Before anything\n";
   if (!engine_) {
-      std::cerr << "No engine";
     return;
   }
-  std::cerr << "Inside invoke\n";
   std::unique_ptr<std::vector<uint8_t>> message =
       GetCodec().EncodeMethodCall(method_call);
   FlutterPlatformMessage platform_message_response = {
@@ -37,7 +34,6 @@ void Plugin::InvokeMethodCall(const MethodCall &method_call) {
       .message = message->data(),
       .message_size = message->size(),
   };
-  std::cerr << channel_.c_str() << std::endl;
   FlutterEngineSendPlatformMessage(engine_, &platform_message_response);
 }
 

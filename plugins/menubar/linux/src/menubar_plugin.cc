@@ -61,7 +61,7 @@ class MenuBarPlugin::Menubar {
     auto plugin = reinterpret_cast<MenuBarPlugin *>(data);
 
     plugin->InvokeMethod(kMenuItemSelectedCallbackMethod,
-                         gtk_widget_get_name(menuItem));
+                         std::stoi(gtk_widget_get_name(menuItem)));
   }
 
   // Create the menu items heirarchy from a given Json object.

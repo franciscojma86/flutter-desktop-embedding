@@ -20,9 +20,9 @@
 #include <vector>
 
 #include <color_panel/color_panel_plugin.h>
-#include <menubar/menubar_plugin.h>
 #include <file_chooser/file_chooser_plugin.h>
 #include <flutter_desktop_embedding/embedder.h>
+#include <menubar/menubar_plugin.h>
 
 namespace {
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     glfwTerminate();
     return EXIT_FAILURE;
   }
-  
+
   // Register any native plugins.
   AddPlugin(window, std::make_unique<plugins_menubar::MenuBarPlugin>());
   AddPlugin(window, std::make_unique<plugins_color_panel::ColorPanelPlugin>());
