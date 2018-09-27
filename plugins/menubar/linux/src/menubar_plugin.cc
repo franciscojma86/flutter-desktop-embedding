@@ -93,8 +93,6 @@ class MenuBarPlugin::Menubar {
 
         SetMenuItems(array, plugin, menu);
       } else {
-        std::cerr << "no children" << std::endl;
-
         auto menuItem = gtk_menu_item_new_with_label(label.c_str());
         if (root["id"].asInt()) {
           std::string idString = std::to_string(root["id"].asInt());
