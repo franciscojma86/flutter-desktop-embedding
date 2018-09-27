@@ -81,16 +81,16 @@ class MenuBarPlugin::Menubar {
       return;
     }
 
-    if ((root["label"]).isString()) {
-      std::string label = root["label"].asString();
+    if ((root[kLabelKey]).isString()) {
+      std::string label = root[kLabelKey].asString();
 
-      if (root["children"].isArray()) {
-        auto array = root["children"];
+      if (root[kChildrenKey].isArray()) {
+        auto array = root[kChildrenKey];
         auto menu = gtk_menu_new();
         auto menuItem = gtk_menu_item_new_with_label(label.c_str());
         
-        if (root["enabled"].isBool()) {
-          gtk_widget_set_sensitive(menuItem, root["enabled"].asBool());
+        if (root[kEnabledKey].isBool()) {
+          gtk_widget_set_sensitive(menuItem, root[kEnabledKey].asBool());
         }
         gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuItem), menu);
         gtk_menu_shell_append(GTK_MENU_SHELL(parentWidget), menuItem);
@@ -98,11 +98,11 @@ class MenuBarPlugin::Menubar {
         SetMenuItems(array, plugin, menu);
       } else {
         auto menuItem = gtk_menu_item_new_with_label(label.c_str());
-        if (root["enabled"].isBool()) {
-          gtk_widget_set_sensitive(menuItem, root["enabled"].asBool());
+        if (root[kEnabledKey].isBool()) {
+          gtk_widget_set_sensitive(menuItem, root[kEnabledKey].asBool());
         }
-        if (root["id"].asInt()) {
-          std::string idString = std::to_string(root["id"].asInt());
+        if (root[kIdKey].asInt()) {
+          std::string idString = std::to_string(root[kIdKey].asInt());
           gtk_widget_set_name(menuItem, idString.c_str());
         }
         g_signal_connect(G_OBJECT(menuItem), "activate",
@@ -111,7 +111,7 @@ class MenuBarPlugin::Menubar {
       }
     }
 
-    if (root.get("isDivider", false).asBool()) {
+    if (root.get(kDividerKey, false).asBool()) {
       auto separator = gtk_separator_menu_item_new();
       gtk_menu_shell_append(GTK_MENU_SHELL(parentWidget), separator);
     }
