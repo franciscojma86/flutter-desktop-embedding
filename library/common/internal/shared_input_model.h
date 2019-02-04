@@ -23,16 +23,21 @@
 namespace flutter_desktop_embedding {
 
 class TextInputModelShared {
-public:
-  TextInputModelShared(int client_id, const Json::Value &config);
+ public:
+  explicit TextInputModelShared(const Json::Value &config);
   virtual ~TextInputModelShared();
-
-private:
-    int client_id_;
-    std::string inputType;
-    std::string inputAction;
+ 
+ private:
+  std::string::iterator selection_base_ = -1;
+  std::string::iterator selection_extent_ = -1;
+  std::string::iterator composing_base_ = -1;
+  std::string::iterator composing_extent_ = -1;
+  std::string text_; 
+  std::string input_type_;
+  std::string input_action_;
+  std::string text_affinity_;
 };
 
-} // namespace flutter_desktop_embedding
+}  // namespace flutter_desktop_embedding
 
 #endif  // LIBRARY_COMMON_INTERNAL_TEXT_INPUT_MODEL_H_

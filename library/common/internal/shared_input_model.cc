@@ -15,7 +15,18 @@
 
 namespace flutter_desktop_embedding {
 
+TextInputModelShared::TextInputModelShared(const Json::Value &config)
+    : text_("") {
+  std::string input_action = config[kTextInputAction].asString();
+  Json::Value input_type_info = config[kTextInputType];
+  std::string input_type = input_type_info[kTextInputTypeName].asString();
+  if (!input_action || !input_type) {
+    throw SampleException;
+  }
+  input_type_ = input_type;
+  input_action_ = input_action;
+}
 
+}  // namespace flutter_desktop_embedding
 
-}   // namespace flutter_desktop_embedding
-
+}  // namespace flutter_desktop_embedding
