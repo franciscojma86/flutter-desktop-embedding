@@ -16,15 +16,23 @@
 namespace flutter_desktop_embedding {
 
 TextInputModelShared::TextInputModelShared(const Json::Value &config)
-    : text_("") {
+    : text_(""),
+      selection_base_(text_.begin()),
+      selection_extent_(text_.begin()),
+      composing_base_(selection_base_),
+      composing_extent_(selection_extent_),
+      text_affinity_("Affinity") {
+  // Inspect the config arguments. There are a number of arguments receiveed
+  // here. Add as needed. If not configured properly, the class should throw.
   std::string input_action = config[kTextInputAction].asString();
   Json::Value input_type_info = config[kTextInputType];
   std::string input_type = input_type_info[kTextInputTypeName].asString();
   if (!input_action || !input_type) {
-    throw SampleException;
+    throw std::invalid_argument("Invalid arguments");
   }
   input_type_ = input_type;
   input_action_ = input_action;
+  std::cerr << "Success!!!!" << endl;
 }
 
 }  // namespace flutter_desktop_embedding

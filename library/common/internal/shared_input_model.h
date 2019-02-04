@@ -28,10 +28,10 @@ class TextInputModelShared {
   virtual ~TextInputModelShared();
  
  private:
-  std::string::iterator selection_base_ = -1;
-  std::string::iterator selection_extent_ = -1;
-  std::string::iterator composing_base_ = -1;
-  std::string::iterator composing_extent_ = -1;
+  std::string::iterator selection_base_;
+  std::string::iterator selection_extent_;
+  std::string::iterator composing_base_;
+  std::string::iterator composing_extent_;
   std::string text_; 
   std::string input_type_;
   std::string input_action_;

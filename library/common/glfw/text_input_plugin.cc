@@ -153,7 +153,7 @@ void TextInputPlugin::HandleMethodCall(
         }
         input_models_.insert(std::make_pair(
             client_id,
-            std::make_unique<TextInputModel>(client_id, client_config)));
+            std::make_unique<TextInputModelShared>(client_config)));
       }
       active_model_ = input_models_[client_id].get();
     } else if (method.compare(kSetEditingStateMethod) == 0) {
