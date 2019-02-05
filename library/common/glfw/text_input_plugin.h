@@ -20,6 +20,7 @@
 #include "library/common/glfw/keyboard_hook_handler.h"
 #include "library/common/internal/text_input_model.h"
 #include "library/common/internal/shared_input_model.h"
+
 #include "library/include/flutter_desktop_embedding/method_channel.h"
 #include "library/include/flutter_desktop_embedding/plugin_registrar.h"
 
@@ -57,6 +58,8 @@ class TextInputPlugin : public KeyboardHookHandler {
 
   // The active model. nullptr if not set.
   TextInputModel *active_model_;
+
+  TextInputModelShared *shared_model_;
 };
 
 }  // namespace flutter_desktop_embedding

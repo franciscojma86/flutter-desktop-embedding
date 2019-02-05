@@ -44,6 +44,8 @@ published_shared_library("flutter_embedder") {
       "common/internal/plugin_handler.h",
       "common/internal/text_input_model.cc",
       "common/internal/text_input_model.h",
+      "common/internal/shared_input_model.cc",
+      "common/internal/shared_input_model.h",
       "common/json_message_codec.cc",
       "common/json_method_codec.cc",
     ]

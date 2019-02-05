@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <iostream>
 
+
 #include "library/include/flutter_desktop_embedding/json_method_codec.h"
 
 static constexpr char kSetEditingStateMethod[] = "TextInput.setEditingState";
@@ -151,9 +152,11 @@ void TextInputPlugin::HandleMethodCall(
               "Input models over limit. Aborting creation of new text model.");
           return;
         }
+        shared_model_ = TextInputModelShared(client_config);
+        std::cerr << shared_model_ << std::endl;
         input_models_.insert(std::make_pair(
             client_id,
-            std::make_unique<TextInputModelShared>(client_config)));
+            std::make_unique<TextInputModel>(client_id, client_config)));
       }
       active_model_ = input_models_[client_id].get();
     } else if (method.compare(kSetEditingStateMethod) == 0) {

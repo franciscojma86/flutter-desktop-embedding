@@ -25,16 +25,16 @@ namespace flutter_desktop_embedding {
 class TextInputModelShared {
  public:
   explicit TextInputModelShared(const Json::Value &config);
-  virtual ~TextInputModelShared();
+  // virtual ~TextInputModelShared();
  
  private:
+  std::string text_; 
+  std::string input_type_;
+  std::string input_action_;
   std::string::iterator selection_base_;
   std::string::iterator selection_extent_;
   std::string::iterator composing_base_;
   std::string::iterator composing_extent_;
-  std::string text_; 
-  std::string input_type_;
-  std::string input_action_;
   std::string text_affinity_;
 };
 
