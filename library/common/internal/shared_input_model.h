@@ -13,8 +13,8 @@
 // limitations under the License.
 
 // TODO: Remove the "shared"
-#ifndef LIBRARY_COMMON_INTERNAL_TEXT_INPUT_MODEL_H_
-#define LIBRARY_COMMON_INTERNAL_TEXT_INPUT_MODEL_H_
+#ifndef LIBRARY_COMMON_INTERNAL_SHARED_INPUT_MODEL_H_
+#define LIBRARY_COMMON_INTERNAL_SHARED_INPUT_MODEL_H_
 
 #include <string>
 
@@ -40,4 +40,4 @@ class TextInputModelShared {
 
 }  // namespace flutter_desktop_embedding
 
-#endif  // LIBRARY_COMMON_INTERNAL_TEXT_INPUT_MODEL_H_
+#endif  // LIBRARY_COMMON_INTERNAL_SHARED_INPUT_MODEL_H_
