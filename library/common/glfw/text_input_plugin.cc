@@ -76,9 +76,12 @@ void TextInputPlugin::KeyboardHook(GLFWwindow *window, int key, int scancode,
         break;
       case GLFW_KEY_END:
         active_model_->MoveCursorToEnd();
+        shared_model_->MoveCursorToEnd();
+
         SendStateUpdate(*active_model_);
         break;
       case GLFW_KEY_HOME:
+        shared_model_->MoveCursorToBeginning();
         active_model_->MoveCursorToBeginning();
         SendStateUpdate(*active_model_);
         break;
@@ -89,7 +92,7 @@ void TextInputPlugin::KeyboardHook(GLFWwindow *window, int key, int scancode,
         }
         break;
       case GLFW_KEY_DELETE:
-      shared_model_->Delete();
+        shared_model_->Delete();
         if (active_model_->Delete()) {
           SendStateUpdate(*active_model_);
         }

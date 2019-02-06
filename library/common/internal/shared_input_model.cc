@@ -34,6 +34,8 @@ static constexpr char kSelectionAffinityKey[] = "selectionAffinity";
 static constexpr char kSelectionIsDirectionalKey[] = "selectionIsDirectional";
 static constexpr char kTextKey[] = "text";
 
+static constexpr char kMultilineInputType[] = "TextInputType.multiline";
+
 namespace flutter_desktop_embedding {
 
 TextInputModelShared::TextInputModelShared(const Json::Value &config)
@@ -102,17 +104,17 @@ void TextInputModelShared::ReplaceString(std::string string, int location = 0,
                                          int length = 0) {
   EraseSelected();
   text_.replace(location, length, string);
-  MoveSelectedLocation(location + string.length());
+  MoveCursorToLocation(location + string.length());
 }
 
 void TextInputModelShared::AddString(std::string string) {
   EraseSelected();
   text_.insert(selection_base_, string);
-  MoveSelectedLocation(++selection_base_);
+  MoveCursorToLocation(++selection_base_);
   speak();
 }
 
-void TextInputModelShared::MoveSelectedLocation(int location) {
+void TextInputModelShared::MoveCursorToLocation(int location) {
   selection_base_ = location;
   selection_extent_ = location;
 }
@@ -122,7 +124,7 @@ void TextInputModelShared::EraseSelected() {
     return;
   }
   text_.erase(selection_base_, selection_extent_);
-  MoveSelectedLocation(selection_extent_);
+  MoveCursorToLocation(selection_extent_);
 }
 
 void TextInputModelShared::BackSpace() {
@@ -131,7 +133,7 @@ void TextInputModelShared::BackSpace() {
     return;
   }
   text_.erase(selection_base_ - 1, selection_base_);
-  MoveSelectedLocation(--selection_base_);
+  MoveCursorToLocation(--selection_base_);
   speak();
 }
 
@@ -139,6 +141,24 @@ void TextInputModelShared::Delete() {
   EraseSelected();
   text_.erase(selection_base_, 1);
   speak();
+}
+
+void TextInputModelShared::MoveCursorToBeginning() {
+  MoveCursorToLocation(0);
+  speak();
+}
+
+void TextInputModelShared::MoveCursorToEnd() {
+  MoveCursorToLocation(text_.length());
+  speak();
+}
+
+bool TextInputModelShared::InsertNewLine() {
+  if (input_type_ != kMultilineInputType) {
+    return false
+  }
+  AddCharacter('\n');
+  return true;
 }
 
 void TextInputModelShared::speak() {

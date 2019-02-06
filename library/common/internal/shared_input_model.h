@@ -37,7 +37,9 @@ class TextInputModelShared {
   void EraseSelected();
   void BackSpace();
   void Delete();
-
+  void MoveCursorToBeginning();
+  void MoveCursorToEnd();
+  bool InsertNewLine();
 
  private:
   std::string text_;
@@ -49,7 +51,7 @@ class TextInputModelShared {
   int composing_extent_ = 0;
   std::string text_affinity_;
 
-  void MoveSelectedLocation(int location);
+  void MoveCursorToLocation(int location);
 };
 
 }  // namespace flutter_desktop_embedding
