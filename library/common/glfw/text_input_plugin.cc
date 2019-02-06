@@ -51,6 +51,8 @@ void TextInputPlugin::CharHook(GLFWwindow *window, unsigned int code_point) {
   }
   // TODO(awdavies): Actually handle potential unicode characters. Probably
   // requires some ICU data or something.
+  std::string s(1, static_cast<char>(code_point));
+  shared_model_->AddString(s);
   active_model_->AddCharacter(static_cast<char>(code_point));
   SendStateUpdate(*active_model_);
 }
@@ -81,11 +83,13 @@ void TextInputPlugin::KeyboardHook(GLFWwindow *window, int key, int scancode,
         SendStateUpdate(*active_model_);
         break;
       case GLFW_KEY_BACKSPACE:
+        shared_model_->BackSpace();
         if (active_model_->Backspace()) {
           SendStateUpdate(*active_model_);
         }
         break;
       case GLFW_KEY_DELETE:
+      shared_model_->Delete();
         if (active_model_->Delete()) {
           SendStateUpdate(*active_model_);
         }

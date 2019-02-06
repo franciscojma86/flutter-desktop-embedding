@@ -32,7 +32,12 @@ class TextInputModelShared {
 
   void speak();
 
-  void AddString(std::string string, int location, int length);
+  void ReplaceString(std::string string, int location, int length);
+  void AddString(std::string string);
+  void EraseSelected();
+  void BackSpace();
+  void Delete();
+
 
  private:
   std::string text_;
@@ -43,6 +48,8 @@ class TextInputModelShared {
   int composing_base_ = 0;
   int composing_extent_ = 0;
   std::string text_affinity_;
+
+  void MoveSelectedLocation(int location);
 };
 
 }  // namespace flutter_desktop_embedding

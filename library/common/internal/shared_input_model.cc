@@ -98,19 +98,47 @@ Json::Value TextInputModelShared::GetEditingState() {
   return args;
 }
 
-void TextInputModelShared::AddString(std::string string, int location = 0,
-                                     int length = 0) {
-  // if (selection_base_ != selection_extent_) {
-  //   // DeleteSelected();
-  // }
-  // if (location == 0 && length == 0) {
-  //   selection_extent_ = text_.insert(selection_extent_, c);
-  // } else {
-  //   // TODO:Check if this is correct
-  //   selection_extent_ = text_.replace(location, length, string);
-  // }
-  // selection_extent_++;
-  // selection_base_ = selection_extent_;
+void TextInputModelShared::ReplaceString(std::string string, int location = 0,
+                                         int length = 0) {
+  EraseSelected();
+  text_.replace(location, length, string);
+  MoveSelectedLocation(location + string.length());
+}
+
+void TextInputModelShared::AddString(std::string string) {
+  EraseSelected();
+  text_.insert(selection_base_, string);
+  MoveSelectedLocation(++selection_base_);
+  speak();
+}
+
+void TextInputModelShared::MoveSelectedLocation(int location) {
+  selection_base_ = location;
+  selection_extent_ = location;
+}
+
+void TextInputModelShared::EraseSelected() {
+  if (selection_base_ == selection_extent_) {
+    return;
+  }
+  text_.erase(selection_base_, selection_extent_);
+  MoveSelectedLocation(selection_extent_);
+}
+
+void TextInputModelShared::BackSpace() {
+  EraseSelected();
+  if (selection_base_ == 0) {
+    return;
+  }
+  text_.erase(selection_base_ - 1, selection_base_);
+  MoveSelectedLocation(--selection_base_);
+  speak();
+}
+
+void TextInputModelShared::Delete() {
+  EraseSelected();
+  text_.erase(selection_base_, 1);
+  speak();
 }
 
 void TextInputModelShared::speak() {
