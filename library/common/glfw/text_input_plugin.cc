@@ -51,8 +51,7 @@ void TextInputPlugin::CharHook(GLFWwindow *window, unsigned int code_point) {
   }
   // TODO(awdavies): Actually handle potential unicode characters. Probably
   // requires some ICU data or something.
-  std::string s(1, static_cast<char>(code_point));
-  shared_model_->AddString(s);
+  shared_model_->AddCharacter(static_cast<char>(code_point));
   active_model_->AddCharacter(static_cast<char>(code_point));
   SendStateUpdate(*active_model_);
 }
@@ -65,11 +64,14 @@ void TextInputPlugin::KeyboardHook(GLFWwindow *window, int key, int scancode,
   if (action == GLFW_PRESS || action == GLFW_REPEAT) {
     switch (key) {
       case GLFW_KEY_LEFT:
+      shared_model_->MoveCursorBack();
         if (active_model_->MoveCursorBack()) {
           SendStateUpdate(*active_model_);
         }
         break;
       case GLFW_KEY_RIGHT:
+            shared_model_->MoveCursorForward();
+
         if (active_model_->MoveCursorForward()) {
           SendStateUpdate(*active_model_);
         }
@@ -213,6 +215,7 @@ void TextInputPlugin::SendStateUpdate(const TextInputModel &model) {
 }
 
 void TextInputPlugin::EnterPressed(TextInputModel *model) {
+  shared_model_->InsertNewLine();
   if (model->input_type() == kMultilineInputType) {
     model->AddCharacter('\n');
     SendStateUpdate(*model);

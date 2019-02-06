@@ -24,21 +24,48 @@ namespace flutter_desktop_embedding {
 
 class TextInputModelShared {
  public:
+  // Constructor for TextInputModelShared. An exception is thrown if
+  // the |config| JSON doesn't contain the required values.
   explicit TextInputModelShared(const Json::Value &config);
-  // virtual ~TextInputModelShared();
+  virtual ~TextInputModelShared();
 
+  // Update the the complete model state.
   bool SetEditingState(const Json::Value &state);
+  // Get the model editing state in a JSON.
   Json::Value GetEditingState();
 
   void speak();
 
+  // Replaces a section of the stored string with a given |string|. |location|
+  // is the starting point where the new string will be added. |length| is the
+  // number of characters to be substituted from the stored string. Erases any
+  // previously selected text.
   void ReplaceString(std::string string, int location, int length);
+
+void AddCharacter(char c);
+  // Adds a string at the current cursor location. Erases any previously
+  // selected text.
   void AddString(std::string string);
-  void EraseSelected();
+
+  // Erases the currently selected text. Return true if any deletion ocurred.
+  bool EraseSelected();
+
+  // Deletes either the selection, or one character behind the cursor.
+  //
+  // Deleting one character behind the cursor occurs when the selection base
+  // and extent are the same.
   void BackSpace();
+
+  // Deletes either the selection, or one character ahead of the cursor.
+  //
+  // Deleting one character ahead of the cursor occurs when the selection base
+  // and extent are the same.
+  //
   void Delete();
   void MoveCursorToBeginning();
   void MoveCursorToEnd();
+  void MoveCursorForward();
+  void MoveCursorBack();
   bool InsertNewLine();
 
  private:
