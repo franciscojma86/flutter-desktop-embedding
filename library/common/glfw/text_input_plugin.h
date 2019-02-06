@@ -58,6 +58,7 @@ class TextInputPlugin : public KeyboardHookHandler {
 
   // The active model. nullptr if not set.
   TextInputModel *active_model_;
+  TextInputModelShared *shared_model_;
 };
 
 }  // namespace flutter_desktop_embedding

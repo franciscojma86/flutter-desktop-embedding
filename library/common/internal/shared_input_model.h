@@ -26,15 +26,22 @@ class TextInputModelShared {
  public:
   explicit TextInputModelShared(const Json::Value &config);
   // virtual ~TextInputModelShared();
- 
+
+  bool SetEditingState(const Json::Value &state);
+  Json::Value GetEditingState();
+
+  void speak();
+
+  void AddString(std::string string, int location, int length);
+
  private:
-  std::string text_; 
+  std::string text_;
   std::string input_type_;
   std::string input_action_;
-  std::string::iterator selection_base_;
-  std::string::iterator selection_extent_;
-  std::string::iterator composing_base_;
-  std::string::iterator composing_extent_;
+  int selection_base_ = 0;
+  int selection_extent_ = 0;
+  int composing_base_ = 0;
+  int composing_extent_ = 0;
   std::string text_affinity_;
 };
 

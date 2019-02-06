@@ -102,7 +102,8 @@ TextInputPlugin::TextInputPlugin(PluginRegistrar *registrar)
     : channel_(std::make_unique<MethodChannel<Json::Value>>(
           registrar->messenger(), kChannelName,
           &JsonMethodCodec::GetInstance())),
-      active_model_(nullptr) {
+      active_model_(nullptr),
+      shared_model_(nullptr) {
   channel_->SetMethodCallHandler(
       [this](const MethodCall<Json::Value> &call,
              std::unique_ptr<MethodResult<Json::Value>> result) {
@@ -152,7 +153,7 @@ void TextInputPlugin::HandleMethodCall(
           return;
         }
         try {
-          auto shared_model_ = TextInputModelShared(client_config);
+          shared_model_ = new TextInputModelShared(client_config);
           std::cerr << "Created" << std::endl;
         } catch (const std::exception &e) {
           result->Error(kBadArgumentError, e.what());
@@ -171,6 +172,8 @@ void TextInputPlugin::HandleMethodCall(
             "Set editing state has been invoked, but no client is set.");
         return;
       }
+      shared_model_->SetEditingState(args);
+      shared_model_->speak();
       Json::Value text = args[kTextKey];
       if (text.isNull()) {
         result->Error(kBadArgumentError,
