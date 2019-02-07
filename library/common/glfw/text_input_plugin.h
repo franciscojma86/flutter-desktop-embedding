@@ -41,10 +41,10 @@ class TextInputPlugin : public KeyboardHookHandler {
 
  private:
   // Sends the current state of the given model to the Flutter engine.
-  void SendStateUpdate(const TextInputModel &model);
+  void SendStateUpdate(const TextInputModelShared &model);
 
   // Sends an action triggered by the Enter key to the Flutter engine.
-  void EnterPressed(TextInputModel *model);
+  void EnterPressed(TextInputModelShared *model);
 
   // Called when a method is called on |channel_|;
   void HandleMethodCall(const MethodCall<Json::Value> &method_call,
@@ -54,11 +54,12 @@ class TextInputPlugin : public KeyboardHookHandler {
   std::unique_ptr<MethodChannel<Json::Value>> channel_;
 
   // Mapping of client IDs to text input models.
-  std::map<int, std::unique_ptr<TextInputModel>> input_models_;
+  std::map<int, std::unique_ptr<TextInputModelShared>> input_models_;
 
   // The active model. nullptr if not set.
-  TextInputModel *active_model_;
-  TextInputModelShared *shared_model_;
+  // TextInputModel *s;
+  TextInputModelShared *active_model_;
+  int active_client_id = 0;
 };
 
 }  // namespace flutter_desktop_embedding

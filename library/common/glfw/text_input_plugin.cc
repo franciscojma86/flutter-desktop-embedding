@@ -51,7 +51,6 @@ void TextInputPlugin::CharHook(GLFWwindow *window, unsigned int code_point) {
   }
   // TODO(awdavies): Actually handle potential unicode characters. Probably
   // requires some ICU data or something.
-  shared_model_->AddCharacter(static_cast<char>(code_point));
   active_model_->AddCharacter(static_cast<char>(code_point));
   SendStateUpdate(*active_model_);
 }
@@ -64,37 +63,31 @@ void TextInputPlugin::KeyboardHook(GLFWwindow *window, int key, int scancode,
   if (action == GLFW_PRESS || action == GLFW_REPEAT) {
     switch (key) {
       case GLFW_KEY_LEFT:
-      shared_model_->MoveCursorBack();
         if (active_model_->MoveCursorBack()) {
           SendStateUpdate(*active_model_);
         }
         break;
       case GLFW_KEY_RIGHT:
-            shared_model_->MoveCursorForward();
-
         if (active_model_->MoveCursorForward()) {
           SendStateUpdate(*active_model_);
         }
         break;
       case GLFW_KEY_END:
-        active_model_->MoveCursorToEnd();
-        shared_model_->MoveCursorToEnd();
-
-        SendStateUpdate(*active_model_);
+        if (active_model_->MoveCursorToEnd()) {
+          SendStateUpdate(*active_model_);
+        }
         break;
       case GLFW_KEY_HOME:
-        shared_model_->MoveCursorToBeginning();
-        active_model_->MoveCursorToBeginning();
-        SendStateUpdate(*active_model_);
+        if (active_model_->MoveCursorToBeginning()) {
+          SendStateUpdate(*active_model_);
+        }
         break;
       case GLFW_KEY_BACKSPACE:
-        shared_model_->BackSpace();
         if (active_model_->Backspace()) {
           SendStateUpdate(*active_model_);
         }
         break;
       case GLFW_KEY_DELETE:
-        shared_model_->Delete();
         if (active_model_->Delete()) {
           SendStateUpdate(*active_model_);
         }
@@ -111,8 +104,7 @@ TextInputPlugin::TextInputPlugin(PluginRegistrar *registrar)
     : channel_(std::make_unique<MethodChannel<Json::Value>>(
           registrar->messenger(), kChannelName,
           &JsonMethodCodec::GetInstance())),
-      active_model_(nullptr),
-      shared_model_(nullptr) {
+      active_model_(nullptr) {
   channel_->SetMethodCallHandler(
       [this](const MethodCall<Json::Value> &call,
              std::unique_ptr<MethodResult<Json::Value>> result) {
@@ -152,8 +144,8 @@ void TextInputPlugin::HandleMethodCall(
         result->Error(kBadArgumentError,
                       "Could not set client, missing arguments.");
       }
-      int client_id = client_id_json.asInt();
-      if (input_models_.find(client_id) == input_models_.end()) {
+      active_client_id = client_id_json.asInt();
+      if (input_models_.find(active_client_id) == input_models_.end()) {
         // Skips out on adding a new input model once over the limit.
         if (input_models_.size() > kInputModelLimit) {
           result->Error(
@@ -162,18 +154,17 @@ void TextInputPlugin::HandleMethodCall(
           return;
         }
         try {
-          shared_model_ = new TextInputModelShared(client_config);
+          auto model = std::make_unique<TextInputModelShared>(client_config);
           std::cerr << "Created" << std::endl;
+          input_models_.insert(
+              std::make_pair(active_client_id, std::move(model)));
+
         } catch (const std::exception &e) {
           result->Error(kBadArgumentError, e.what());
           return;
         }
-
-        input_models_.insert(std::make_pair(
-            client_id,
-            std::make_unique<TextInputModel>(client_id, client_config)));
       }
-      active_model_ = input_models_[client_id].get();
+      active_model_ = input_models_[active_client_id].get();
     } else if (method.compare(kSetEditingStateMethod) == 0) {
       if (active_model_ == nullptr) {
         result->Error(
@@ -181,23 +172,24 @@ void TextInputPlugin::HandleMethodCall(
             "Set editing state has been invoked, but no client is set.");
         return;
       }
-      shared_model_->SetEditingState(args);
-      shared_model_->speak();
-      Json::Value text = args[kTextKey];
-      if (text.isNull()) {
-        result->Error(kBadArgumentError,
-                      "Set editing state has been invoked, but without text.");
-        return;
-      }
-      Json::Value selection_base = args[kSelectionBaseKey];
-      Json::Value selection_extent = args[kSelectionExtentKey];
-      if (selection_base.isNull() || selection_extent.isNull()) {
-        result->Error(kInternalConsistencyError,
-                      "Selection base/extent values invalid.");
-        return;
-      }
-      active_model_->SetEditingState(selection_base.asInt(),
-                                     selection_extent.asInt(), text.asString());
+      active_model_->SetEditingState(args);
+      // Json::Value text = args[kTextKey];
+      // if (text.isNull()) {
+      //   result->Error(kBadArgumentError,
+      //                 "Set editing state has been invoked, but without
+      //                 text.");
+      //   return;
+      // }
+      // Json::Value selection_base = args[kSelectionBaseKey];
+      // Json::Value selection_extent = args[kSelectionExtentKey];
+      // if (selection_base.isNull() || selection_extent.isNull()) {
+      //   result->Error(kInternalConsistencyError,
+      //                 "Selection base/extent values invalid.");
+      //   return;
+      // }
+      // active_model_->SetEditingState(selection_base.asInt(),
+      //                                selection_extent.asInt(),
+      //                                text.asString());
     } else {
       // Unhandled method.
       result->NotImplemented();
@@ -209,19 +201,20 @@ void TextInputPlugin::HandleMethodCall(
   result->Success();
 }
 
-void TextInputPlugin::SendStateUpdate(const TextInputModel &model) {
+void TextInputPlugin::SendStateUpdate(const TextInputModelShared &model) {
+  auto state = std::make_unique<Json::Value>();
+  state.get()->append(active_client_id);
+  state.get()->append(model.GetEditingState());
   channel_->InvokeMethod(kUpdateEditingStateMethod,
-                         std::make_unique<Json::Value>(model.GetState()));
+                         std::move(state));
 }
 
-void TextInputPlugin::EnterPressed(TextInputModel *model) {
-  shared_model_->InsertNewLine();
-  if (model->input_type() == kMultilineInputType) {
-    model->AddCharacter('\n');
+void TextInputPlugin::EnterPressed(TextInputModelShared *model) {
+  if (model->InsertNewLine()) {
     SendStateUpdate(*model);
   }
   auto args = std::make_unique<Json::Value>(Json::arrayValue);
-  args->append(model->client_id());
+  args->append(active_client_id);
   args->append(model->input_action());
 
   channel_->InvokeMethod(kPerformActionMethod, std::move(args));

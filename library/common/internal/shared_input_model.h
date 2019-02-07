@@ -32,7 +32,7 @@ class TextInputModelShared {
   // Update the the complete model state.
   bool SetEditingState(const Json::Value &state);
   // Get the model editing state in a JSON.
-  Json::Value GetEditingState();
+  Json::Value GetEditingState() const;
 
   void speak();
 
@@ -42,7 +42,7 @@ class TextInputModelShared {
   // previously selected text.
   void ReplaceString(std::string string, int location, int length);
 
-void AddCharacter(char c);
+  void AddCharacter(char c);
   // Adds a string at the current cursor location. Erases any previously
   // selected text.
   void AddString(std::string string);
@@ -54,19 +54,21 @@ void AddCharacter(char c);
   //
   // Deleting one character behind the cursor occurs when the selection base
   // and extent are the same.
-  void BackSpace();
+  bool Backspace();
 
   // Deletes either the selection, or one character ahead of the cursor.
   //
   // Deleting one character ahead of the cursor occurs when the selection base
   // and extent are the same.
   //
-  void Delete();
-  void MoveCursorToBeginning();
-  void MoveCursorToEnd();
-  void MoveCursorForward();
-  void MoveCursorBack();
+  bool Delete();
+  bool MoveCursorToBeginning();
+  bool MoveCursorToEnd();
+  bool MoveCursorForward();
+  bool MoveCursorBack();
   bool InsertNewLine();
+
+  std::string input_action();
 
  private:
   std::string text_;
@@ -78,7 +80,7 @@ void AddCharacter(char c);
   int composing_extent_ = 0;
   std::string text_affinity_;
 
-  void MoveCursorToLocation(int location);
+  bool MoveCursorToLocation(int location);
 };
 
 }  // namespace flutter_desktop_embedding

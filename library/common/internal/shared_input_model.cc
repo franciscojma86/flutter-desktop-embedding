@@ -86,7 +86,7 @@ bool TextInputModelShared::SetEditingState(const Json::Value &state) {
   return true;
 }
 
-Json::Value TextInputModelShared::GetEditingState() {
+Json::Value TextInputModelShared::GetEditingState() const {
   Json::Value editing_state;
   editing_state[kComposingBaseKey] = composing_base_;
   editing_state[kComposingExtentKey] = composing_extent_;
@@ -96,9 +96,7 @@ Json::Value TextInputModelShared::GetEditingState() {
   editing_state[kSelectionIsDirectionalKey] = false;
   editing_state[kTextKey] = text_;
 
-  Json::Value args = Json::arrayValue;
-  args.append(editing_state);
-  return args;
+  return editing_state;
 }
 
 void TextInputModelShared::ReplaceString(std::string string, int location = 0,
@@ -119,9 +117,13 @@ void TextInputModelShared::AddString(std::string string) {
   speak();
 }
 
-void TextInputModelShared::MoveCursorToLocation(int location) {
+bool TextInputModelShared::MoveCursorToLocation(int location) {
+  if (location == selection_base_ && location == selection_extent_) {
+    return false;
+  }
   selection_base_ = location;
   selection_extent_ = location;
+  return true;
 }
 
 bool TextInputModelShared::EraseSelected() {
@@ -133,31 +135,48 @@ bool TextInputModelShared::EraseSelected() {
   return true;
 }
 
-void TextInputModelShared::BackSpace() {
-  if (EraseSelected() || selection_base_ == 0) {
-    return;
+bool TextInputModelShared::Backspace() {
+  if (EraseSelected()) {
+    return true;
+  }
+  if (selection_base_ == 0) {
+    return false;
   }
   text_.erase(selection_base_ - 1, 1);
   MoveCursorToLocation(--selection_base_);
   speak();
+
+  return true;
 }
 
-void TextInputModelShared::Delete() {
+bool TextInputModelShared::Delete() {
   if (EraseSelected()) {
-    return;
+    return true;
+  }
+  if (selection_base_ == static_cast<int>(text_.length())) {
+    return false;
   }
   text_.erase(selection_base_, 1);
   speak();
+  return true;
 }
 
-void TextInputModelShared::MoveCursorToBeginning() {
+bool TextInputModelShared::MoveCursorToBeginning() {
+  if (selection_base_ == 0) {
+    return false;
+  }
   MoveCursorToLocation(0);
   speak();
+  return true;
 }
 
-void TextInputModelShared::MoveCursorToEnd() {
+bool TextInputModelShared::MoveCursorToEnd() {
+  if (selection_base_ == static_cast<int>(text_.length())) {
+    return false;
+  }
   MoveCursorToLocation(text_.length());
   speak();
+  return true;
 }
 
 bool TextInputModelShared::InsertNewLine() {
@@ -168,24 +187,27 @@ bool TextInputModelShared::InsertNewLine() {
   return true;
 }
 
-void TextInputModelShared::MoveCursorForward() {
+bool TextInputModelShared::MoveCursorForward() {
   if (selection_base_ == static_cast<int>(text_.length())) {
-    std::cout << "Not moving" << std::endl;
-    return;
+    return false;;
   }
   MoveCursorToLocation(++selection_base_);
   speak();
+  return true;
 }
 
-void TextInputModelShared::MoveCursorBack() {
+bool TextInputModelShared::MoveCursorBack() {
   if (selection_base_ == 0) {
-    return;
+    return false;
   }
   MoveCursorToLocation(--selection_base_);
   speak();
+  return true;
 }
 
-
+std::string TextInputModelShared::input_action() {
+  return input_action_;
+}
 void TextInputModelShared::speak() {
   std::cout << "Speak" << std::endl;
   std::cout << GetEditingState();
