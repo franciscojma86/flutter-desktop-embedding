@@ -34,16 +34,24 @@ static constexpr char kSelectionAffinityKey[] = "selectionAffinity";
 static constexpr char kSelectionIsDirectionalKey[] = "selectionIsDirectional";
 static constexpr char kTextKey[] = "text";
 
+// InputType keys.
+// https://docs.flutter.io/flutter/services/TextInputType-class.html
 static constexpr char kMultilineInputType[] = "TextInputType.multiline";
 
 static constexpr char kLineBreakKey = '\n';
 
 namespace flutter_desktop_embedding {
 
+bool LocationIsAtEnd(int location, std::string text) {
+  return (location == static_cast<int>(text.length()));
+}
+
+bool LocationIsAtBeginning(int location) { return (location == 0); }
+
 TextInputModelShared::TextInputModelShared(const Json::Value &config)
     : text_(""), text_affinity_(kTextAffinityUpstream) {
-  // Inspect the config arguments. There are a number of arguments receiveed
-  // here. Add as needed. If not configured properly, the class should throw.
+  // Use/inspect more arguments as needed. input_type and input_action should
+  // always be present.
   std::string input_action = config[kTextInputAction].asString();
   Json::Value input_type_info = config[kTextInputType];
   std::string input_type = input_type_info[kTextInputTypeName].asString();
@@ -56,7 +64,6 @@ TextInputModelShared::TextInputModelShared(const Json::Value &config)
 TextInputModelShared::~TextInputModelShared() {}
 
 bool TextInputModelShared::SetEditingState(const Json::Value &state) {
-  std::cout << state << std::endl;
   Json::Value text = state[kTextKey];
   if (text.isNull()) {
     std::cerr << "Set editing state has been invoked, but without text."
@@ -116,32 +123,21 @@ void TextInputModelShared::AddString(std::string string) {
   EraseSelected();
   text_.insert(selection_base_, string);
   MoveCursorToLocation(++selection_base_);
-  speak();
-}
-
-bool TextInputModelShared::MoveCursorToLocation(int location) {
-  if (location == selection_base_ && location == selection_extent_) {
-    return false;
-  }
-  if (selection_base_ > static_cast<int>(text_.length()) ||
-      selection_base_ < 0) {
-    return false;
-  }
-  selection_base_ = location;
-  selection_extent_ = location;
-  return true;
 }
 
 bool TextInputModelShared::EraseSelected() {
   if (selection_base_ == selection_extent_) {
     return false;
   }
-  text_.erase(selection_base_, selection_extent_);
-  MoveCursorToLocation(selection_base_);
+  int base = std::min(selection_base_, selection_extent_);
+  int extent = std::max(selection_base_, selection_extent_);
+  text_.erase(base, extent);
+  MoveCursorToLocation(base);
   return true;
 }
 
 bool TextInputModelShared::Backspace() {
+  // If a selection was deleted, don't delete more characters.
   if (EraseSelected()) {
     return true;
   }
@@ -150,30 +146,67 @@ bool TextInputModelShared::Backspace() {
   }
   text_.erase(selection_base_ - 1, 1);
   MoveCursorToLocation(--selection_base_);
-  speak();
 
   return true;
 }
 
-bool LocationIsAtEnd(int location, std::string text) {
-  return (location == static_cast<int>(text.length()));
+bool TextInputModelShared::Delete() {
+  // If a selection was deleted, don't delete more characters.
+  if (EraseSelected()) {
+    return true;
+  }
+  if (selection_base_ == static_cast<int>(text_.length())) {
+    return false;
+  }
+  text_.erase(selection_base_, 1);
+
+  return true;
 }
 
-bool LocationIsAtBeginning(int location) { return (location == 0); }
+bool TextInputModelShared::MoveCursorToLocation(int location) {
+  if (location == selection_base_ && location == selection_extent_) {
+    return false;
+  }
+  if (location > static_cast<int>(text_.length()) || location < 0) {
+    return false;
+  }
+  selection_base_ = location;
+  selection_extent_ = location;
+  return true;
+}
 
 bool TextInputModelShared::MoveCursorUp() {
+  // Only perform for multiline models.
+  // Trying to find a line break before position 0 will find the last line
+  // break, which is undesired behavior.
   if (input_type_ != kMultilineInputType ||
       LocationIsAtBeginning(selection_base_)) {
     return false;
   }
+
+  // rfind will get the line break before or at the given location. Substract 1
+  // to avoid finding the line break the cursor is standing on.
   std::size_t previous_break = text_.rfind(kLineBreakKey, selection_base_ - 1);
   if (previous_break == std::string::npos) {
     return false;
   }
+  // Attempt to find a line break before the previous one. Finding this break
+  // helps in the calculation to adjust the cursor to the previous line break,
+  // in case there are more than one.
   std::size_t before_previous = text_.rfind(kLineBreakKey, previous_break - 1);
 
-  // Explain
-  int new_location = selection_base_ - previous_break + before_previous;
+  // |before_previous| will return an unsigned int with the position of the
+  // character found. If none is found, std::string::npos is returned,
+  // which is a constant to -1. When a line break is found, it includes the line
+  // break position. If -1 is returned, it's used to compensate for the missing
+  // line break we would otherwise get.
+  int new_location =
+      selection_base_ - previous_break + static_cast<int>(before_previous);
+
+  // It is possible that the calculation above results in a new location further
+  // from the previous break. e.g. 'aaaaa\na\naaaaa|a' where | is the position
+  // of the cursor. The expected behavior would be to move to the end of the
+  // previous line.
   if (new_location > static_cast<int>(previous_break)) {
     new_location = previous_break;
   }
@@ -185,21 +218,29 @@ bool TextInputModelShared::MoveCursorUp() {
 }
 
 bool TextInputModelShared::MoveCursorDown() {
+  // Only perform for multiline models.
   if (input_type_ != kMultilineInputType ||
       LocationIsAtEnd(selection_base_, text_))
     return false;
+
   std::size_t next_break = text_.find(kLineBreakKey, selection_base_);
   if (next_break == std::string::npos) {
+    // No need to continue if there's no new line below.
     return false;
   }
   std::size_t previous_break = std::string::npos;
   if (!LocationIsAtBeginning(selection_base_)) {
+    // Avoid looking for line break before position -1.
     previous_break = text_.rfind(kLineBreakKey, selection_base_ - 1);
   }
-  // Explain
+
+  // std::string::npos is a constant to -1. When a line break is found, it
+  // includes the line break position. If |previous_break| is npos, it's used to
+  // compensate for the missing line break we would otherwise get.
   int new_location =
       selection_base_ - static_cast<int>(previous_break) + next_break;
-  // Find the next break;
+
+  // Find the next break to avoid going over more than one line.
   std::size_t further_break = text_.find(kLineBreakKey, next_break + 1);
   if (further_break != std::string::npos &&
       new_location > static_cast<int>(further_break)) {
@@ -213,33 +254,21 @@ bool TextInputModelShared::MoveCursorDown() {
   return true;
 }
 
-bool TextInputModelShared::Delete() {
-  if (EraseSelected()) {
-    return true;
-  }
-  if (selection_base_ == static_cast<int>(text_.length())) {
-    return false;
-  }
-  text_.erase(selection_base_, 1);
-  speak();
-  return true;
-}
-
 bool TextInputModelShared::MoveCursorToBeginning() {
-  if (selection_base_ == 0) {
+  if (LocationIsAtBeginning(selection_base_)) {
     return false;
   }
   MoveCursorToLocation(0);
-  speak();
+
   return true;
 }
 
 bool TextInputModelShared::MoveCursorToEnd() {
-  if (selection_base_ == static_cast<int>(text_.length())) {
+  if (LocationIsAtEnd(selection_base_, text_)) {
     return false;
   }
   MoveCursorToLocation(text_.length());
-  speak();
+
   return true;
 }
 
@@ -252,30 +281,23 @@ bool TextInputModelShared::InsertNewLine() {
 }
 
 bool TextInputModelShared::MoveCursorForward() {
-  if (selection_base_ == static_cast<int>(text_.length())) {
+  if (LocationIsAtEnd(selection_base_, text_)) {
     return false;
-    ;
   }
   MoveCursorToLocation(++selection_base_);
-  speak();
+
   return true;
 }
 
 bool TextInputModelShared::MoveCursorBack() {
-  if (selection_base_ == 0) {
+  if (LocationIsAtBeginning(selection_base_)) {
     return false;
   }
   MoveCursorToLocation(--selection_base_);
-  speak();
+
   return true;
 }
 
 std::string TextInputModelShared::input_action() { return input_action_; }
-void TextInputModelShared::speak() {
-  std::cout << "Speak" << std::endl;
-  std::cout << GetEditingState();
-  std::cout << std::endl;
-  std::cout << "speaking " << std::endl;
-}
 
 }  // namespace flutter_desktop_embedding

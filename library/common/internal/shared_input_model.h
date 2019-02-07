@@ -114,8 +114,6 @@ class TextInputModelShared {
   // https://docs.flutter.io/flutter/services/TextInputAction-class.html
   std::string input_action();
 
-  void speak();
-
  private:
   bool MoveCursorToLocation(int location);
   bool EraseSelected();

@@ -183,24 +183,11 @@ void TextInputPlugin::HandleMethodCall(
             "Set editing state has been invoked, but no client is set.");
         return;
       }
-      active_model_->SetEditingState(args);
-      // Json::Value text = args[kTextKey];
-      // if (text.isNull()) {
-      //   result->Error(kBadArgumentError,
-      //                 "Set editing state has been invoked, but without
-      //                 text.");
-      //   return;
-      // }
-      // Json::Value selection_base = args[kSelectionBaseKey];
-      // Json::Value selection_extent = args[kSelectionExtentKey];
-      // if (selection_base.isNull() || selection_extent.isNull()) {
-      //   result->Error(kInternalConsistencyError,
-      //                 "Selection base/extent values invalid.");
-      //   return;
-      // }
-      // active_model_->SetEditingState(selection_base.asInt(),
-      //                                selection_extent.asInt(),
-      //                                text.asString());
+      if (!active_model_->SetEditingState(args)) {
+        result->Error(
+            kBadArgumentError,
+            "Failed to set state. Arguments might be missing or misconfigured");
+      }
     } else {
       // Unhandled method.
       result->NotImplemented();
