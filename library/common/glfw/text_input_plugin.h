@@ -19,7 +19,6 @@
 
 #include "library/common/glfw/keyboard_hook_handler.h"
 #include "library/common/internal/text_input_model.h"
-#include "library/common/internal/shared_input_model.h"
 
 #include "library/include/flutter_desktop_embedding/method_channel.h"
 #include "library/include/flutter_desktop_embedding/plugin_registrar.h"
@@ -41,10 +40,10 @@ class TextInputPlugin : public KeyboardHookHandler {
 
  private:
   // Sends the current state of the given model to the Flutter engine.
-  void SendStateUpdate(const TextInputModelShared &model);
+  void SendStateUpdate(const TextInputModel &model);
 
   // Sends an action triggered by the Enter key to the Flutter engine.
-  void EnterPressed(TextInputModelShared *model);
+  void EnterPressed(TextInputModel *model);
 
   // Called when a method is called on |channel_|;
   void HandleMethodCall(const MethodCall<Json::Value> &method_call,
@@ -54,11 +53,11 @@ class TextInputPlugin : public KeyboardHookHandler {
   std::unique_ptr<MethodChannel<Json::Value>> channel_;
 
   // Mapping of client IDs to text input models.
-  std::map<int, std::unique_ptr<TextInputModelShared>> input_models_;
+  std::map<int, std::unique_ptr<TextInputModel>> input_models_;
 
   // The active model. nullptr if not set.
   // TextInputModel *s;
-  TextInputModelShared *active_model_;
+  TextInputModel *active_model_;
   int active_client_id = 0;
 };
 

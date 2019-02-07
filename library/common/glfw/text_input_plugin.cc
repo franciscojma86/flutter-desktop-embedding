@@ -165,7 +165,7 @@ void TextInputPlugin::HandleMethodCall(
           return;
         }
         try {
-          auto model = std::make_unique<TextInputModelShared>(client_config);
+          auto model = std::make_unique<TextInputModel>(client_config);
           std::cerr << "Created" << std::endl;
           input_models_.insert(
               std::make_pair(active_client_id, std::move(model)));
@@ -199,14 +199,14 @@ void TextInputPlugin::HandleMethodCall(
   result->Success();
 }
 
-void TextInputPlugin::SendStateUpdate(const TextInputModelShared &model) {
+void TextInputPlugin::SendStateUpdate(const TextInputModel &model) {
   auto state = std::make_unique<Json::Value>();
   state.get()->append(active_client_id);
   state.get()->append(model.GetEditingState());
   channel_->InvokeMethod(kUpdateEditingStateMethod, std::move(state));
 }
 
-void TextInputPlugin::EnterPressed(TextInputModelShared *model) {
+void TextInputPlugin::EnterPressed(TextInputModel *model) {
   if (model->InsertNewLine()) {
     SendStateUpdate(*model);
   }
