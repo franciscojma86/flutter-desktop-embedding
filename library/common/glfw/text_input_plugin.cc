@@ -62,6 +62,17 @@ void TextInputPlugin::KeyboardHook(GLFWwindow *window, int key, int scancode,
   }
   if (action == GLFW_PRESS || action == GLFW_REPEAT) {
     switch (key) {
+      case GLFW_KEY_DOWN:
+        if (active_model_->Down()) {
+          SendStateUpdate(*active_model_);
+        }
+        break;
+      case GLFW_KEY_UP:
+        if (active_model_->Up()) {
+          SendStateUpdate(*active_model_);
+        }
+        break;
+
       case GLFW_KEY_LEFT:
         if (active_model_->MoveCursorBack()) {
           SendStateUpdate(*active_model_);
@@ -205,8 +216,7 @@ void TextInputPlugin::SendStateUpdate(const TextInputModelShared &model) {
   auto state = std::make_unique<Json::Value>();
   state.get()->append(active_client_id);
   state.get()->append(model.GetEditingState());
-  channel_->InvokeMethod(kUpdateEditingStateMethod,
-                         std::move(state));
+  channel_->InvokeMethod(kUpdateEditingStateMethod, std::move(state));
 }
 
 void TextInputPlugin::EnterPressed(TextInputModelShared *model) {

@@ -261,6 +261,7 @@ class SampleTextField extends StatelessWidget {
       padding: const EdgeInsets.all(10.0),
       child: TextField(
         decoration: InputDecoration(border: OutlineInputBorder()),
+        maxLines: 10,
       ),
     );
   }

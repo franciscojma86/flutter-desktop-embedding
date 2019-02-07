@@ -121,6 +121,10 @@ bool TextInputModelShared::MoveCursorToLocation(int location) {
   if (location == selection_base_ && location == selection_extent_) {
     return false;
   }
+  if (selection_base_ > static_cast<int>(text_.length()) ||
+      selection_base_ < 0) {
+    return false;
+  }
   selection_base_ = location;
   selection_extent_ = location;
   return true;
@@ -131,7 +135,7 @@ bool TextInputModelShared::EraseSelected() {
     return false;
   }
   text_.erase(selection_base_, selection_extent_);
-  MoveCursorToLocation(selection_extent_);
+  MoveCursorToLocation(selection_base_);
   return true;
 }
 
@@ -147,6 +151,58 @@ bool TextInputModelShared::Backspace() {
   speak();
 
   return true;
+}
+
+bool TextInputModelShared::Up() {
+  std::size_t first = text_.rfind('\n', selection_base_ -1);
+  std::cout << first << std::endl;
+  if (first != std::string::npos) {
+    std::size_t another = text_.rfind('\n', first - 1);
+    if (another == std::string::npos) {
+      another = -1;
+    }
+    std::cout << another << std::endl;
+
+    int new_location = selection_base_ - first + another;
+    if (new_location > static_cast<int>(first)) {
+      new_location = first;
+    }
+    // if (new_location < 1) {
+    //   new_location = 1;
+    // }
+    std::cout << new_location << std::endl;
+    MoveCursorToLocation(new_location);
+    return true;
+  }
+  return false;
+}
+
+bool TextInputModelShared::Down() {
+  std::size_t later = text_.find('\n', selection_base_);
+ std::cout << later << std::endl;
+  if (later != std::string::npos) {
+      std::size_t first = text_.rfind('\n', selection_base_ - 1);
+    if (first == std::string::npos) {
+      first = -1;
+    }
+    std::cout << first << std::endl;
+
+    int new_location = selection_base_ + later - first;
+    std::cout << new_location << std::endl;
+    if (new_location > static_cast<int>(text_.length())) {
+      new_location = text_.length();
+    }
+    std::size_t more = text_.find('\n', later + 1);
+    
+    if (more != std::string::npos &&  new_location > static_cast<int>(more)) {
+      new_location = more;
+    }
+        std::cout << new_location << std::endl;
+
+    MoveCursorToLocation(new_location);
+    return true;
+  }
+  return false;
 }
 
 bool TextInputModelShared::Delete() {
@@ -189,7 +245,8 @@ bool TextInputModelShared::InsertNewLine() {
 
 bool TextInputModelShared::MoveCursorForward() {
   if (selection_base_ == static_cast<int>(text_.length())) {
-    return false;;
+    return false;
+    ;
   }
   MoveCursorToLocation(++selection_base_);
   speak();
@@ -205,9 +262,7 @@ bool TextInputModelShared::MoveCursorBack() {
   return true;
 }
 
-std::string TextInputModelShared::input_action() {
-  return input_action_;
-}
+std::string TextInputModelShared::input_action() { return input_action_; }
 void TextInputModelShared::speak() {
   std::cout << "Speak" << std::endl;
   std::cout << GetEditingState();
