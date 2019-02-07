@@ -19,7 +19,6 @@
 
 #include "library/common/glfw/keyboard_hook_handler.h"
 #include "library/common/internal/text_input_model.h"
-
 #include "library/include/flutter_desktop_embedding/method_channel.h"
 #include "library/include/flutter_desktop_embedding/plugin_registrar.h"
 
@@ -56,8 +55,9 @@ class TextInputPlugin : public KeyboardHookHandler {
   std::map<int, std::unique_ptr<TextInputModel>> input_models_;
 
   // The active model. nullptr if not set.
-  // TextInputModel *s;
   TextInputModel *active_model_;
+
+  // The active client id.
   int active_client_id = 0;
 };
 

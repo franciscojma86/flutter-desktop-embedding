@@ -14,7 +14,6 @@
 #include "library/common/internal/text_input_model.h"
 
 #include <iostream>
-#include <sstream>
 
 // Client config  keys.
 static constexpr char kTextInputAction[] = "inputAction";
@@ -99,7 +98,10 @@ Json::Value TextInputModel::GetEditingState() const {
   Json::Value editing_state;
   editing_state[kComposingBaseKey] = composing_base_;
   editing_state[kComposingExtentKey] = composing_extent_;
-  editing_state[kSelectionAffinityKey] = text_affinity_;
+  editing_state[kSelectionAffinityKey] =
+      text_affinity_.compare(kTextAffinityUpstream) == 0
+          ? kTextAffinityUpstream
+          : kTextAffinityDownstream;
   editing_state[kSelectionBaseKey] = selection_base_;
   editing_state[kSelectionExtentKey] = selection_extent_;
   editing_state[kSelectionIsDirectionalKey] = false;
@@ -109,7 +111,7 @@ Json::Value TextInputModel::GetEditingState() const {
 }
 
 void TextInputModel::ReplaceString(std::string string, int location = 0,
-                                         int length = 0) {
+                                   int length = 0) {
   EraseSelected();
   text_.replace(location, length, string);
   MoveCursorToLocation(location + string.length());
@@ -175,6 +177,41 @@ bool TextInputModel::MoveCursorToLocation(int location) {
   return true;
 }
 
+bool TextInputModel::MoveCursorToBeginning() {
+  if (LocationIsAtBeginning(selection_base_)) {
+    return false;
+  }
+  MoveCursorToLocation(0);
+
+  return true;
+}
+
+bool TextInputModel::MoveCursorToEnd() {
+  if (LocationIsAtEnd(selection_base_, text_)) {
+    return false;
+  }
+  MoveCursorToLocation(text_.length());
+
+  return true;
+}
+
+bool TextInputModel::MoveCursorForward() {
+  if (LocationIsAtEnd(selection_base_, text_)) {
+    return false;
+  }
+  MoveCursorToLocation(++selection_base_);
+
+  return true;
+}
+
+bool TextInputModel::MoveCursorBack() {
+  if (LocationIsAtBeginning(selection_base_)) {
+    return false;
+  }
+  MoveCursorToLocation(--selection_base_);
+
+  return true;
+}
 bool TextInputModel::MoveCursorUp() {
   // Only perform for multiline models.
   // Trying to find a line break before position 0 will find the last line
@@ -254,47 +291,11 @@ bool TextInputModel::MoveCursorDown() {
   return true;
 }
 
-bool TextInputModel::MoveCursorToBeginning() {
-  if (LocationIsAtBeginning(selection_base_)) {
-    return false;
-  }
-  MoveCursorToLocation(0);
-
-  return true;
-}
-
-bool TextInputModel::MoveCursorToEnd() {
-  if (LocationIsAtEnd(selection_base_, text_)) {
-    return false;
-  }
-  MoveCursorToLocation(text_.length());
-
-  return true;
-}
-
 bool TextInputModel::InsertNewLine() {
   if (input_type_ != kMultilineInputType) {
     return false;
   }
   AddCharacter(kLineBreakKey);
-  return true;
-}
-
-bool TextInputModel::MoveCursorForward() {
-  if (LocationIsAtEnd(selection_base_, text_)) {
-    return false;
-  }
-  MoveCursorToLocation(++selection_base_);
-
-  return true;
-}
-
-bool TextInputModel::MoveCursorBack() {
-  if (LocationIsAtBeginning(selection_base_)) {
-    return false;
-  }
-  MoveCursorToLocation(--selection_base_);
-
   return true;
 }
 

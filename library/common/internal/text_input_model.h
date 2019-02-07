@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #ifndef LIBRARY_COMMON_INTERNAL_TEXT_INPUT_MODEL_H_
 #define LIBRARY_COMMON_INTERNAL_TEXT_INPUT_MODEL_H_
 
@@ -21,6 +20,9 @@
 
 namespace flutter_desktop_embedding {
 
+// Handles underlying text input state, using a simple ASCII model.
+//
+// Ignores special states like "insert mode" for now.
 class TextInputModel {
  public:
   // Constructor for TextInputModel. An exception is thrown if
@@ -48,7 +50,6 @@ class TextInputModel {
   // Either appends after the cursor (when selection base and extent are the
   // same), or deletes the selected characters, replacing the text with the
   // character specified.
-
   void AddCharacter(char c);
 
   // Adds a string.
@@ -96,9 +97,6 @@ class TextInputModel {
   // for extent to be equal to the base.
   bool MoveCursorBack();
 
-  // Inserts a new line to the text if the |input_type| is multiline.
-  bool InsertNewLine();
-
   // Attempts to move the cursor to a line above, if any.
   //
   // Returns true if the cursor could be moved.
@@ -108,6 +106,9 @@ class TextInputModel {
   //
   // Returns true if the cursor could be moved.
   bool MoveCursorDown();
+
+  // Inserts a new line to the text if the |input_type| is multiline.
+  bool InsertNewLine();
 
   // An action requested by the user on the input client. See available options:
   // https://docs.flutter.io/flutter/services/TextInputAction-class.html

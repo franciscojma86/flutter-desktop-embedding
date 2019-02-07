@@ -72,7 +72,6 @@ void TextInputPlugin::KeyboardHook(GLFWwindow *window, int key, int scancode,
           SendStateUpdate(*active_model_);
         }
         break;
-
       case GLFW_KEY_LEFT:
         if (active_model_->MoveCursorBack()) {
           SendStateUpdate(*active_model_);
@@ -166,7 +165,6 @@ void TextInputPlugin::HandleMethodCall(
         }
         try {
           auto model = std::make_unique<TextInputModel>(client_config);
-          std::cerr << "Created" << std::endl;
           input_models_.insert(
               std::make_pair(active_client_id, std::move(model)));
 
