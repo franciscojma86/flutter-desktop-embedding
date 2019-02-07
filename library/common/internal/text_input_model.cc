@@ -212,6 +212,7 @@ bool TextInputModel::MoveCursorBack() {
 
   return true;
 }
+
 bool TextInputModel::MoveCursorUp() {
   // Only perform for multiline models.
   // Trying to find a line break before position 0 will find the last line
