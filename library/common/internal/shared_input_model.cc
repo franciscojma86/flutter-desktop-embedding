@@ -154,7 +154,7 @@ bool TextInputModelShared::Backspace() {
 }
 
 bool TextInputModelShared::Up() {
-  std::size_t first = text_.rfind('\n', selection_base_ -1);
+  std::size_t first = text_.rfind('\n', selection_base_ - 1);
   std::cout << first << std::endl;
   if (first != std::string::npos) {
     std::size_t another = text_.rfind('\n', first - 1);
@@ -163,7 +163,7 @@ bool TextInputModelShared::Up() {
     }
     std::cout << another << std::endl;
 
-    int new_location = selection_base_ - first + another;
+    int new_location = selection_base_ - first + static_cast<int>(another);
     if (new_location > static_cast<int>(first)) {
       new_location = first;
     }
@@ -187,7 +187,7 @@ bool TextInputModelShared::Down() {
     }
     std::cout << first << std::endl;
 
-    int new_location = selection_base_ + later - first;
+    int new_location = selection_base_ + later - static_cast<int>(first);
     std::cout << new_location << std::endl;
     if (new_location > static_cast<int>(text_.length())) {
       new_location = text_.length();
