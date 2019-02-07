@@ -161,40 +161,18 @@ bool LocationIsAtEnd(int location, std::string text) {
 
 bool LocationIsAtBeginning(int location) { return (location == 0); }
 
-// bool TextInputModelShared::Up() {
-//   std::size_t previous_break = text_.rfind('\n', selection_base_ - 1);
-//   if (previous_break != std::string::npos) {
-//     std::size_t before_previous = text_.rfind('\n', previous_break - 1);
-//     int compensate;
-//     if (before_previous == std::string::npos) {
-//       compensate = -1;
-//     } else {
-//       compensate = static_cast<int>(before_previous);
-//     }
-//     int new_location = selection_base_ - previous_break + compensate;
-//     if (new_location > static_cast<int>(previous_break)) {
-//       new_location = previous_break;
-//     }
-//     if (new_location < 1) {
-//       new_location = 0;
-//     }
-//     MoveCursorToLocation(new_location);
-//     return true;
-//   }
-//   return false;
-// }
-
 bool TextInputModelShared::MoveCursorUp() {
-  if (LocationIsAtBeginning(selection_base_)) {
+  if (input_type_ != kMultilineInputType ||
+      LocationIsAtBeginning(selection_base_)) {
     return false;
   }
-  std::size_t previous_break = text_.rfind('\n', selection_base_ - 1);
+  std::size_t previous_break = text_.rfind(kLineBreakKey, selection_base_ - 1);
   if (previous_break == std::string::npos) {
     return false;
   }
-  std::size_t before_previous = text_.rfind('\n', previous_break - 1);
- 
- //Explain
+  std::size_t before_previous = text_.rfind(kLineBreakKey, previous_break - 1);
+
+  // Explain
   int new_location = selection_base_ - previous_break + before_previous;
   if (new_location > static_cast<int>(previous_break)) {
     new_location = previous_break;
@@ -207,7 +185,9 @@ bool TextInputModelShared::MoveCursorUp() {
 }
 
 bool TextInputModelShared::MoveCursorDown() {
-  if (LocationIsAtEnd(selection_base_, text_)) return false;
+  if (input_type_ != kMultilineInputType ||
+      LocationIsAtEnd(selection_base_, text_))
+    return false;
   std::size_t next_break = text_.find(kLineBreakKey, selection_base_);
   if (next_break == std::string::npos) {
     return false;
@@ -267,7 +247,7 @@ bool TextInputModelShared::InsertNewLine() {
   if (input_type_ != kMultilineInputType) {
     return false;
   }
-  AddCharacter('\n');
+  AddCharacter(kLineBreakKey);
   return true;
 }
 

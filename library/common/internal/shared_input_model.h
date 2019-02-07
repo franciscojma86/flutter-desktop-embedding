@@ -25,30 +25,41 @@ namespace flutter_desktop_embedding {
 class TextInputModelShared {
  public:
   // Constructor for TextInputModelShared. An exception is thrown if
-  // the |config| JSON doesn't contain the required values.
+  // the |config| JSON contains bad arguments.
   explicit TextInputModelShared(const Json::Value &config);
   virtual ~TextInputModelShared();
 
-  // Update the the complete model state.
+  // Attempts to set the text state.
+  //
+  // Returns false if the state is not valid (base or extent are out of
+  // bounds, or base is less than extent).
   bool SetEditingState(const Json::Value &state);
-  // Get the model editing state in a JSON.
-  Json::Value GetEditingState() const;
 
-  void speak();
+  // Returns the state in the form of a platform message.
+  Json::Value GetEditingState() const;
 
   // Replaces a section of the stored string with a given |string|. |location|
   // is the starting point where the new string will be added. |length| is the
-  // number of characters to be substituted from the stored string. Erases any
-  // previously selected text.
+  // number of characters to be substituted from the stored string, starting
+  // from |location. Deletes any previously selected text.
   void ReplaceString(std::string string, int location, int length);
 
+  // Adds a character.
+  //
+  // Either appends after the cursor (when selection base and extent are the
+  // same), or deletes the selected characters, replacing the text with the
+  // character specified.
+
   void AddCharacter(char c);
-  // Adds a string at the current cursor location. Erases any previously
-  // selected text.
+
+  // Adds a string.
+  //
+  // Either appends after the cursor (when selection base and extent are the
+  // same), or deletes the selected characters, replacing the text with the
+  // character specified.
   void AddString(std::string string);
 
   // Erases the currently selected text. Return true if any deletion ocurred.
-  bool EraseSelected();
 
   // Deletes either the selection, or one character behind the cursor.
   //
@@ -61,20 +72,54 @@ class TextInputModelShared {
   // Deleting one character ahead of the cursor occurs when the selection base
   // and extent are the same.
   //
+  // Returns true if any deletion actually occurred.
   bool Delete();
+
+  // Attempts to move the cursor to the beginning.
+  //
+  // Returns true if the cursor could be moved.
   bool MoveCursorToBeginning();
+
+  // Attempts to move the cursor to the end.
+  //
+  // Returns true if the cursor could be moved.
   bool MoveCursorToEnd();
+
+  // Attempts to move the cursor forward.
+  //
+  // Returns true if the cursor could be moved.
   bool MoveCursorForward();
+
+  // Attempts to move the cursor backward.
+  //
+  // Returns true if the cursor could be moved. Changes base and extent to be
+  // equal to either the extent (if extent is at the end of the string), or
+  // for extent to be equal to the base.
   bool MoveCursorBack();
+
+  // Inserts a new line to the text if the |input_type| is multiline.
   bool InsertNewLine();
 
-  bool Down();
+  // Attempts to move the cursor to a line above, if any.
+  //
+  // Returns true if the cursor could be moved.
   bool MoveCursorUp();
+
+  // Attempts to move the cursor to a line below, if any.
+  //
+  // Returns true if the cursor could be moved.
   bool MoveCursorDown();
 
+  // An action requested by the user on the input client. See available options:
+  // https://docs.flutter.io/flutter/services/TextInputAction-class.html
   std::string input_action();
 
+  void speak();
+
  private:
+  bool MoveCursorToLocation(int location);
+  bool EraseSelected();
+
   std::string text_;
   std::string input_type_;
   std::string input_action_;
@@ -83,8 +128,6 @@ class TextInputModelShared {
   int composing_base_ = 0;
   int composing_extent_ = 0;
   std::string text_affinity_;
-
-  bool MoveCursorToLocation(int location);
 };
 
 }  // namespace flutter_desktop_embedding
