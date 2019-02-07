@@ -167,9 +167,9 @@ bool TextInputModelShared::Up() {
     if (new_location > static_cast<int>(first)) {
       new_location = first;
     }
-    // if (new_location < 1) {
-    //   new_location = 1;
-    // }
+    if (new_location < 1) {
+      new_location = 0;
+    }
     std::cout << new_location << std::endl;
     MoveCursorToLocation(new_location);
     return true;
