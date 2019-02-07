@@ -36,6 +36,8 @@ static constexpr char kTextKey[] = "text";
 
 static constexpr char kMultilineInputType[] = "TextInputType.multiline";
 
+static constexpr char kLineBreakKey = '\n';
+
 namespace flutter_desktop_embedding {
 
 TextInputModelShared::TextInputModelShared(const Json::Value &config)
@@ -153,56 +155,82 @@ bool TextInputModelShared::Backspace() {
   return true;
 }
 
-bool TextInputModelShared::Up() {
-  std::size_t first = text_.rfind('\n', selection_base_ - 1);
-  std::cout << first << std::endl;
-  if (first != std::string::npos) {
-    std::size_t another = text_.rfind('\n', first - 1);
-    if (another == std::string::npos) {
-      another = -1;
-    }
-    std::cout << another << std::endl;
-
-    int new_location = selection_base_ - first + static_cast<int>(another);
-    if (new_location > static_cast<int>(first)) {
-      new_location = first;
-    }
-    if (new_location < 1) {
-      new_location = 0;
-    }
-    std::cout << new_location << std::endl;
-    MoveCursorToLocation(new_location);
-    return true;
-  }
-  return false;
+bool LocationIsAtEnd(int location, std::string text) {
+  return (location == static_cast<int>(text.length()));
 }
 
-bool TextInputModelShared::Down() {
-  std::size_t later = text_.find('\n', selection_base_);
- std::cout << later << std::endl;
-  if (later != std::string::npos) {
-      std::size_t first = text_.rfind('\n', selection_base_ - 1);
-    if (first == std::string::npos) {
-      first = -1;
-    }
-    std::cout << first << std::endl;
+bool LocationIsAtBeginning(int location) { return (location == 0); }
 
-    int new_location = selection_base_ + later - static_cast<int>(first);
-    std::cout << new_location << std::endl;
-    if (new_location > static_cast<int>(text_.length())) {
-      new_location = text_.length();
-    }
-    std::size_t more = text_.find('\n', later + 1);
-    
-    if (more != std::string::npos &&  new_location > static_cast<int>(more)) {
-      new_location = more;
-    }
-        std::cout << new_location << std::endl;
+// bool TextInputModelShared::Up() {
+//   std::size_t previous_break = text_.rfind('\n', selection_base_ - 1);
+//   if (previous_break != std::string::npos) {
+//     std::size_t before_previous = text_.rfind('\n', previous_break - 1);
+//     int compensate;
+//     if (before_previous == std::string::npos) {
+//       compensate = -1;
+//     } else {
+//       compensate = static_cast<int>(before_previous);
+//     }
+//     int new_location = selection_base_ - previous_break + compensate;
+//     if (new_location > static_cast<int>(previous_break)) {
+//       new_location = previous_break;
+//     }
+//     if (new_location < 1) {
+//       new_location = 0;
+//     }
+//     MoveCursorToLocation(new_location);
+//     return true;
+//   }
+//   return false;
+// }
 
-    MoveCursorToLocation(new_location);
-    return true;
+bool TextInputModelShared::MoveCursorUp() {
+  if (LocationIsAtBeginning(selection_base_)) {
+    return false;
   }
-  return false;
+  std::size_t previous_break = text_.rfind('\n', selection_base_ - 1);
+  if (previous_break == std::string::npos) {
+    return false;
+  }
+  std::size_t before_previous = text_.rfind('\n', previous_break - 1);
+ 
+ //Explain
+  int new_location = selection_base_ - previous_break + before_previous;
+  if (new_location > static_cast<int>(previous_break)) {
+    new_location = previous_break;
+  }
+  if (new_location < 0) {
+    new_location = 0;
+  }
+  MoveCursorToLocation(new_location);
+  return true;
+}
+
+bool TextInputModelShared::MoveCursorDown() {
+  if (LocationIsAtEnd(selection_base_, text_)) return false;
+  std::size_t next_break = text_.find(kLineBreakKey, selection_base_);
+  if (next_break == std::string::npos) {
+    return false;
+  }
+  std::size_t previous_break = std::string::npos;
+  if (!LocationIsAtBeginning(selection_base_)) {
+    previous_break = text_.rfind(kLineBreakKey, selection_base_ - 1);
+  }
+  // Explain
+  int new_location =
+      selection_base_ - static_cast<int>(previous_break) + next_break;
+  // Find the next break;
+  std::size_t further_break = text_.find(kLineBreakKey, next_break + 1);
+  if (further_break != std::string::npos &&
+      new_location > static_cast<int>(further_break)) {
+    new_location = further_break;
+  }
+  if (LocationIsAtEnd(new_location, text_)) {
+    new_location = text_.length();
+  }
+
+  MoveCursorToLocation(new_location);
+  return true;
 }
 
 bool TextInputModelShared::Delete() {

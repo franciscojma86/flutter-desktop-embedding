@@ -69,7 +69,8 @@ class TextInputModelShared {
   bool InsertNewLine();
 
   bool Down();
-  bool Up();
+  bool MoveCursorUp();
+  bool MoveCursorDown();
 
   std::string input_action();
 

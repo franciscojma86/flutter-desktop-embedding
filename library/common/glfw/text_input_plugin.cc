@@ -63,12 +63,12 @@ void TextInputPlugin::KeyboardHook(GLFWwindow *window, int key, int scancode,
   if (action == GLFW_PRESS || action == GLFW_REPEAT) {
     switch (key) {
       case GLFW_KEY_DOWN:
-        if (active_model_->Down()) {
+        if (active_model_->MoveCursorDown()) {
           SendStateUpdate(*active_model_);
         }
         break;
       case GLFW_KEY_UP:
-        if (active_model_->Up()) {
+        if (active_model_->MoveCursorUp()) {
           SendStateUpdate(*active_model_);
         }
         break;
