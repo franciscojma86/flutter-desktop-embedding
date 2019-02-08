@@ -14,8 +14,6 @@
 
 #import "FLETextInputPlugin.h"
 
-#import <objc/message.h>
-
 #import "FLEJSONMethodCodec.h"
 #import "FLETextInputModel.h"
 #import "FLEViewController+Internal.h"
@@ -246,8 +244,9 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
     // handle retain semantics properly. See https://stackoverflow.com/questions/7017281/ for more
     // information.
     IMP imp = [self methodForSelector:selector];
-    void (*func)(id, SEL, id) = (void *)imp;
-    func(self, selector, nil);
+    typedef void (*Command)(id, SEL, id);
+    Command command = (Command)imp;
+    command(self, selector, nil);
   }
 }
 
