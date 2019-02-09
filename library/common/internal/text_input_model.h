@@ -18,6 +18,10 @@
 
 #include <json/json.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 namespace flutter_desktop_embedding {
 
 // Handles underlying text input state, using a simple ASCII model.
@@ -129,5 +133,9 @@ class TextInputModel {
 };
 
 }  // namespace flutter_desktop_embedding
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // LIBRARY_COMMON_INTERNAL_TEXT_INPUT_MODEL_H_

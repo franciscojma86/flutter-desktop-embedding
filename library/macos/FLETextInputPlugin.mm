@@ -18,6 +18,12 @@
 #import "FLETextInputModel.h"
 #import "FLEViewController+Internal.h"
 
+#include "library/common/internal/text_input_model.h"
+
+#include <map>
+#include <iostream>
+#include <memory>
+
 static NSString *const kTextInputChannel = @"flutter/textinput";
 
 // See
@@ -34,7 +40,9 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
 /**
  * Private properties of FlutterTextInputPlugin.
  */
-@interface FLETextInputPlugin () <NSTextInputClient>
+@interface FLETextInputPlugin () <NSTextInputClient> {
+  flutter_desktop_embedding::TextInputModel *model;
+}
 
 /**
  * A text input context, representing a connection to the Cocoa text input system.
@@ -99,6 +107,77 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
   return (_activeClientID == nil) ? nil : _textInputModels[_activeClientID];
 }
 
+/*
+ Json::FastWriter fastWritter;
+ std::string serialized = fastWritter.write(value);
+ serialized.c_str(); // this is the raw byte array (null terminated).
+ And Json::Reader to deserialize:
+
+ Json::Reader reader;
+ Json::Value value;
+ reader.parse(serializedString, value);
+ */
+
+std::string parseJson(Json::Value json) {
+
+  // Configure the Builder, then ...
+  Json::StreamWriterBuilder wbuilder;
+  std::string result = Json::writeString(wbuilder, json);
+  return result; // this is the raw byte array (null terminated).
+}
+
+- (NSDictionary *)dictFromJsonString:(std::string)string {
+  NSString *s = [NSString stringWithCString:string.c_str()
+                                              encoding:[NSString defaultCStringEncoding]];
+  NSData *data = [s dataUsingEncoding:NSUTF8StringEncoding];
+  return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:nil];
+}
+
+- (NSString *)stringFromDictionary:(NSDictionary *)dict {
+  NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
+  return [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
+}
+
+Json::Value jsonFromString(NSString *string) {
+  Json::CharReaderBuilder builder;
+  Json::CharReader * reader = builder.newCharReader();
+  Json::Value result;
+  std::string errors;
+  std::string s = [string UTF8String];
+  bool parsingSuccessful = reader->parse( s.c_str(), s.c_str() + s.size(), &result, &errors);     //parse process
+  if (!parsingSuccessful) {
+    std::cerr << "Something went wrong" << std::endl;
+    std::cerr << errors << std::endl;
+  }
+  return result;
+}
+
+Json::Value convertDict(id dict) {
+  Json::Value a;
+  if ([dict isKindOfClass:[NSDictionary class]]) {
+    for (NSString *key in [dict allKeys]) {
+      Json::Value t;
+      id v = dict[key];
+      if ([v isKindOfClass:[NSString class]]) {
+        t = [v UTF8String];
+      } else if ([v isKindOfClass:[NSNumber class]]) {
+        t = [v intValue];
+      } else if ([v isKindOfClass:[NSDictionary class]]){
+        t = convertDict(v);
+      }
+      std::string s = [key UTF8String];
+      std::cout << t << std::endl;
+      a[s] = t;
+    }
+  } else if ([dict isKindOfClass:[NSArray class]]) {
+    for (int i = 0; i < [dict length]; i++) {
+      a.append(convertDict(dict[i]));
+    }
+  }
+
+  return a;
+}
+
 - (void)handleMethodCall:(FLEMethodCall *)call result:(FLEMethodResult)result {
   BOOL handled = YES;
   NSString *method = call.methodName;
@@ -115,6 +194,10 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
         (_activeClientID == nil || ![_activeClientID isEqualToNumber:clientID])) {
       _activeClientID = clientID;
       // TODO: Do we need to preserve state across setClient calls?
+      NSString *s = [self stringFromDictionary:call.arguments[1]];
+      Json::Value d = jsonFromString(s);
+      model = new flutter_desktop_embedding::TextInputModel(d);
+
       FLETextInputModel *inputModel =
           [[FLETextInputModel alloc] initWithClientID:clientID configuration:call.arguments[1]];
       if (!inputModel) {
@@ -135,7 +218,13 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
     _activeClientID = nil;
   } else if ([method isEqualToString:kSetEditingStateMethod]) {
     NSDictionary *state = call.arguments;
+    NSString *s = [self stringFromDictionary:state];
+
+    Json::Value c = jsonFromString(s);
+    model->SetEditingState(c);
     self.activeModel.state = state;
+    std::cout << model->GetEditingState();
+    std::cout << std::endl;
   } else {
     handled = NO;
     NSLog(@"Unhandled text input method '%@'", method);
@@ -150,9 +239,15 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
   if (self.activeModel == nil) {
     return;
   }
+  Json::Value j = model->GetEditingState();
+  std::string s = parseJson(j);
+  NSDictionary *d = [self dictFromJsonString:s];
 
   [_channel invokeMethod:kUpdateEditStateResponseMethod
-               arguments:@[ _activeClientID, _textInputModels[_activeClientID].state ]];
+               arguments:@[ _activeClientID, d ]];
+
+//  [_channel invokeMethod:kUpdateEditStateResponseMethod
+//               arguments:@[ _activeClientID, _textInputModels[_activeClientID].state ]];
 }
 
 #pragma mark -
@@ -177,6 +272,10 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
  * than the supposedly more RTL-friendly moveForward and moveBackward.
  */
 - (void)moveLeft:(nullable id)sender {
+  model->MoveCursorBack();
+  std::cout << model->GetEditingState();
+  std::cout << std::endl;
+
   NSRange selection = self.activeModel.selectedRange;
   if (selection.length == 0) {
     if (selection.location > 0) {
@@ -192,6 +291,10 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
 }
 
 - (void)moveRight:(nullable id)sender {
+  model->MoveCursorForward();
+  std::cout << model->GetEditingState();
+  std::cout << std::endl;
+
   NSRange selection = self.activeModel.selectedRange;
   if (selection.length == 0) {
     if (selection.location < self.activeModel.text.length) {
@@ -207,6 +310,10 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
 }
 
 - (void)deleteBackward:(id)sender {
+  model->Backspace();
+  std::cout << model->GetEditingState();
+  std::cout << std::endl;
+
   NSRange selection = self.activeModel.selectedRange;
   if (selection.location == 0) return;
   NSRange range = selection;
@@ -223,6 +330,10 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
 #pragma mark NSTextInputClient
 
 - (void)insertText:(id)string replacementRange:(NSRange)range {
+  model->AddString([string UTF8String]);
+  std::cout << model->GetEditingState();
+  std::cout << std::endl;
+
   if (self.activeModel != nil) {
     if (range.location == NSNotFound && range.length == 0) {
       // Use selection
@@ -238,6 +349,20 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
   }
 }
 
+- (void)moveUp:(id)sender {
+  model->MoveCursorUp();
+  std::cout << model->GetEditingState();
+  std::cout << std::endl;
+  [self updateEditState];
+}
+
+- (void)moveDown:(id)sender {
+  model->MoveCursorDown();
+  std::cout << model->GetEditingState();
+  std::cout << std::endl;
+  [self updateEditState];
+}
+
 - (void)doCommandBySelector:(SEL)selector {
   if ([self respondsToSelector:selector]) {
     // Note: The more obvious [self performSelector...] doesn't give ARC enough information to
@@ -251,9 +376,13 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
 }
 
 - (void)insertNewline:(id)sender {
-  if ([self.activeModel.inputType isEqualToString:kMultilineInputType]) {
-    [self insertText:@"\n" replacementRange:self.activeModel.selectedRange];
-  }
+  model->InsertNewLine();
+  std::cout << model->GetEditingState();
+  std::cout << std::endl;
+  [self updateEditState];
+//  if ([self.activeModel.inputType isEqualToString:kMultilineInputType]) {
+//    [self insertText:@"\n" replacementRange:self.activeModel.selectedRange];
+//  }
   [_channel invokeMethod:kPerformAction
                arguments:@[ _activeClientID, self.activeModel.inputAction ]];
 }
