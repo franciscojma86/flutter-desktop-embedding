@@ -37,6 +37,24 @@ static NSString *const kUpdateEditStateResponseMethod = @"TextInputClient.update
 static NSString *const kPerformAction = @"TextInputClient.performAction";
 static NSString *const kMultilineInputType = @"TextInputType.multiline";
 
+// State keys.
+static NSString *const kComposingBaseKey = @"composingBase";
+static NSString *const kComposingExtentKey = @"composingExtent";
+static NSString *const kSelectionBaseKey = @"selectionBase";
+static NSString *const kSelectionExtentKey = @"selectionExtent";
+static NSString *const kSelectionAffinityKey = @"selectionAffinity";
+static NSString *const kSelectionIsDirectionalKey = @"selectionIsDirectional";
+static NSString *const kTextKey = @"text";
+
+// Client config  keys.
+static NSString *const kTextInputAction = @"inputAction";
+static NSString *const kTextInputType = @"inputType";
+static NSString *const kTextInputTypeName = @"name";
+
+// Text affinity options keys.
+static constexpr char kTextAffinityDownstream[] = "TextAffinity.downstream";
+static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
+
 /**
  * Private properties of FlutterTextInputPlugin.
  */
@@ -107,76 +125,55 @@ static NSString *const kMultilineInputType = @"TextInputType.multiline";
   return (_activeClientID == nil) ? nil : _textInputModels[_activeClientID];
 }
 
-/*
- Json::FastWriter fastWritter;
- std::string serialized = fastWritter.write(value);
- serialized.c_str(); // this is the raw byte array (null terminated).
- And Json::Reader to deserialize:
-
- Json::Reader reader;
- Json::Value value;
- reader.parse(serializedString, value);
- */
-
-std::string parseJson(Json::Value json) {
-
-  // Configure the Builder, then ...
-  Json::StreamWriterBuilder wbuilder;
-  std::string result = Json::writeString(wbuilder, json);
-  return result; // this is the raw byte array (null terminated).
-}
-
-- (NSDictionary *)dictFromJsonString:(std::string)string {
-  NSString *s = [NSString stringWithCString:string.c_str()
-                                              encoding:[NSString defaultCStringEncoding]];
-  NSData *data = [s dataUsingEncoding:NSUTF8StringEncoding];
-  return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:nil];
-}
-
-- (NSString *)stringFromDictionary:(NSDictionary *)dict {
-  NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
-  return [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
-}
-
-Json::Value jsonFromString(NSString *string) {
-  Json::CharReaderBuilder builder;
-  Json::CharReader * reader = builder.newCharReader();
-  Json::Value result;
-  std::string errors;
-  std::string s = [string UTF8String];
-  bool parsingSuccessful = reader->parse( s.c_str(), s.c_str() + s.size(), &result, &errors);     //parse process
-  if (!parsingSuccessful) {
-    std::cerr << "Something went wrong" << std::endl;
-    std::cerr << errors << std::endl;
+- (flutter_desktop_embedding::State)stateFromDict:(NSDictionary *)dict {
+  flutter_desktop_embedding::State new_state;
+  NSString *text = dict[kTextKey];
+  if (!text) {
+    throw std::invalid_argument(
+                                "Set editing state has been invoked, but without text.");
   }
-  return result;
-}
+  new_state.text = [text UTF8String];
 
-Json::Value convertDict(id dict) {
-  Json::Value a;
-  if ([dict isKindOfClass:[NSDictionary class]]) {
-    for (NSString *key in [dict allKeys]) {
-      Json::Value t;
-      id v = dict[key];
-      if ([v isKindOfClass:[NSString class]]) {
-        t = [v UTF8String];
-      } else if ([v isKindOfClass:[NSNumber class]]) {
-        t = [v intValue];
-      } else if ([v isKindOfClass:[NSDictionary class]]){
-        t = convertDict(v);
-      }
-      std::string s = [key UTF8String];
-      std::cout << t << std::endl;
-      a[s] = t;
-    }
-  } else if ([dict isKindOfClass:[NSArray class]]) {
-    for (int i = 0; i < [dict length]; i++) {
-      a.append(convertDict(dict[i]));
-    }
+  NSNumber *selection_base = dict[kSelectionBaseKey];
+  NSNumber *selection_extent = dict[kSelectionExtentKey];
+  if (!selection_base || !selection_extent) {
+    throw std::invalid_argument("Selection base/extent values invalid.");
   }
+  new_state.selection_base = [selection_base intValue];
+  new_state.selection_extent = [selection_extent intValue];
 
-  return a;
+  NSNumber *composing_base = dict[kComposingBaseKey];
+  NSNumber *composing_extent = dict[kComposingExtentKey];
+
+
+  new_state.composing_base = composing_base ? [composing_base intValue] : new_state.composing_base;
+
+  new_state.composing_extent = composing_extent ? [composing_extent intValue] : new_state.composing_extent;
+
+  NSString *text_affinity = dict[kSelectionAffinityKey];
+  new_state.text_affinity = text_affinity ? [text_affinity UTF8String] : kTextAffinityDownstream;
+
+  return new_state;
 }
+
+- (NSDictionary *)dictFromState:(flutter_desktop_embedding::State)state {
+  std::string affinity = state.text_affinity.compare(kTextAffinityUpstream) == 0
+  ? kTextAffinityUpstream
+  : kTextAffinityDownstream;
+  NSString *affinityString = [NSString stringWithCString:affinity.c_str()
+                                                encoding:[NSString defaultCStringEncoding]];
+  return @{
+           kComposingBaseKey:  [NSNumber numberWithInt:state.composing_base],
+           kComposingExtentKey: [NSNumber numberWithInt:state.composing_extent],
+           kSelectionAffinityKey: affinityString,
+           kSelectionBaseKey:  [NSNumber numberWithInt:state.selection_base],
+           kSelectionExtentKey: [NSNumber numberWithInt:state.selection_extent],
+           kSelectionIsDirectionalKey: @NO,
+           kTextKey : [NSString stringWithCString:state.text.c_str()
+                                         encoding:[NSString defaultCStringEncoding]]
+           };
+}
+
 
 - (void)handleMethodCall:(FLEMethodCall *)call result:(FLEMethodResult)result {
   BOOL handled = YES;
@@ -194,9 +191,11 @@ Json::Value convertDict(id dict) {
         (_activeClientID == nil || ![_activeClientID isEqualToNumber:clientID])) {
       _activeClientID = clientID;
       // TODO: Do we need to preserve state across setClient calls?
-      NSString *s = [self stringFromDictionary:call.arguments[1]];
-      Json::Value d = jsonFromString(s);
-      model = new flutter_desktop_embedding::TextInputModel(d);
+      NSDictionary *client_config = call.arguments[1];
+      NSDictionary *inputTypeInfo = client_config[kTextInputType];
+      NSString *inputType = inputTypeInfo[kTextInputTypeName];
+      NSString *inputAction = client_config[kTextInputAction];
+      model = new flutter_desktop_embedding::TextInputModel([inputType UTF8String], [inputAction UTF8String]);
 
       FLETextInputModel *inputModel =
           [[FLETextInputModel alloc] initWithClientID:clientID configuration:call.arguments[1]];
@@ -217,14 +216,12 @@ Json::Value convertDict(id dict) {
   } else if ([method isEqualToString:kClearClientMethod]) {
     _activeClientID = nil;
   } else if ([method isEqualToString:kSetEditingStateMethod]) {
-    NSDictionary *state = call.arguments;
-    NSString *s = [self stringFromDictionary:state];
-
-    Json::Value c = jsonFromString(s);
-    model->SetEditingState(c);
-    self.activeModel.state = state;
-    std::cout << model->GetEditingState();
-    std::cout << std::endl;
+    NSDictionary *args = call.arguments;
+    flutter_desktop_embedding::State state = [self stateFromDict:args];
+    model->UpdateState(state);
+    self.activeModel.state = args;
+    flutter_desktop_embedding::State changed_state = model->GetState();
+    NSLog(@"%@", [self dictFromState:changed_state]);
   } else {
     handled = NO;
     NSLog(@"Unhandled text input method '%@'", method);
@@ -239,9 +236,7 @@ Json::Value convertDict(id dict) {
   if (self.activeModel == nil) {
     return;
   }
-  Json::Value j = model->GetEditingState();
-  std::string s = parseJson(j);
-  NSDictionary *d = [self dictFromJsonString:s];
+  NSDictionary *d = [self dictFromState:model->GetState()];
 
   [_channel invokeMethod:kUpdateEditStateResponseMethod
                arguments:@[ _activeClientID, d ]];
@@ -273,7 +268,6 @@ Json::Value convertDict(id dict) {
  */
 - (void)moveLeft:(nullable id)sender {
   model->MoveCursorBack();
-  std::cout << model->GetEditingState();
   std::cout << std::endl;
 
   NSRange selection = self.activeModel.selectedRange;
@@ -292,7 +286,6 @@ Json::Value convertDict(id dict) {
 
 - (void)moveRight:(nullable id)sender {
   model->MoveCursorForward();
-  std::cout << model->GetEditingState();
   std::cout << std::endl;
 
   NSRange selection = self.activeModel.selectedRange;
@@ -311,7 +304,6 @@ Json::Value convertDict(id dict) {
 
 - (void)deleteBackward:(id)sender {
   model->Backspace();
-  std::cout << model->GetEditingState();
   std::cout << std::endl;
 
   NSRange selection = self.activeModel.selectedRange;
@@ -331,7 +323,6 @@ Json::Value convertDict(id dict) {
 
 - (void)insertText:(id)string replacementRange:(NSRange)range {
   model->AddString([string UTF8String]);
-  std::cout << model->GetEditingState();
   std::cout << std::endl;
 
   if (self.activeModel != nil) {
@@ -351,14 +342,12 @@ Json::Value convertDict(id dict) {
 
 - (void)moveUp:(id)sender {
   model->MoveCursorUp();
-  std::cout << model->GetEditingState();
   std::cout << std::endl;
   [self updateEditState];
 }
 
 - (void)moveDown:(id)sender {
   model->MoveCursorDown();
-  std::cout << model->GetEditingState();
   std::cout << std::endl;
   [self updateEditState];
 }
@@ -377,7 +366,6 @@ Json::Value convertDict(id dict) {
 
 - (void)insertNewline:(id)sender {
   model->InsertNewLine();
-  std::cout << model->GetEditingState();
   std::cout << std::endl;
   [self updateEditState];
 //  if ([self.activeModel.inputType isEqualToString:kMultilineInputType]) {

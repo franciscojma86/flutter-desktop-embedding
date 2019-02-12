@@ -22,7 +22,6 @@
 
 /* Begin PBXBuildFile section */
 		1A0A8C7D220E42C0008D78FC /* text_input_model.cc in Sources */ = {isa = PBXBuildFile; fileRef = 1A0A8C7C220E42C0008D78FC /* text_input_model.cc */; };
-		1A0A8C7F220E431F008D78FC /* jsoncpp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A0A8C7E220E431F008D78FC /* jsoncpp.cpp */; };
 		1E2492391FCF50BE00DD3BBB /* FLEOpenGLContextHandling.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E24922F1FCF50BE00DD3BBB /* FLEOpenGLContextHandling.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E24923B1FCF50BE00DD3BBB /* FLEPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E2492311FCF50BE00DD3BBB /* FLEPlugin.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E24923C1FCF50BE00DD3BBB /* FLEReshapeListener.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E2492321FCF50BE00DD3BBB /* FLEReshapeListener.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -83,7 +82,6 @@
 
 /* Begin PBXFileReference section */
 		1A0A8C7C220E42C0008D78FC /* text_input_model.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = text_input_model.cc; path = ../common/internal/text_input_model.cc; sourceTree = "<group>"; };
-		1A0A8C7E220E431F008D78FC /* jsoncpp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = jsoncpp.cpp; path = jsoncpp/jsoncpp.cpp; sourceTree = "<group>"; };
 		1E2492241FCF504200DD3BBB /* FlutterEmbedderMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = FlutterEmbedderMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E24922F1FCF50BE00DD3BBB /* FLEOpenGLContextHandling.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FLEOpenGLContextHandling.h; sourceTree = "<group>"; };
 		1E2492311FCF50BE00DD3BBB /* FLEPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FLEPlugin.h; sourceTree = "<group>"; };
@@ -136,7 +134,6 @@
 		1E24921A1FCF504200DD3BBB = {
 			isa = PBXGroup;
 			children = (
-				1A0A8C7E220E431F008D78FC /* jsoncpp.cpp */,
 				1A0A8C7C220E42C0008D78FC /* text_input_model.cc */,
 				C4C1FE431FD74F6400691968 /* FlutterEmbedder.framework */,
 				1E2492371FCF50BE00DD3BBB /* FlutterEmbedderMac.h */,
@@ -321,7 +318,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1A0A8C7F220E431F008D78FC /* jsoncpp.cpp in Sources */,
 				1A0A8C7D220E42C0008D78FC /* text_input_model.cc in Sources */,
 				33D7B59A20A4F54400296EFC /* FLEMethodChannel.m in Sources */,
 				1E2492401FCF50BE00DD3BBB /* FLEViewController.mm in Sources */,
@@ -479,7 +475,6 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../**";
 				PRODUCT_BUNDLE_IDENTIFIER = com.google.FlutterEmbedderMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -503,7 +498,6 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../**";
 				PRODUCT_BUNDLE_IDENTIFIER = com.google.FlutterEmbedderMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
