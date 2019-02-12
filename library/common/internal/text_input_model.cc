@@ -36,7 +36,7 @@ void TextInputModel::ReplaceString(std::string string, int location = 0,
                                    int length = 0) {
   EraseSelected();
   state_.text.replace(location, length, string);
-  MoveCursorToLocation(location + string.length());
+  MoveCursorToLocation(location + static_cast<int>(string.length()));
 }
 void TextInputModel::AddCharacter(char c) {
   std::string s(1, c);
@@ -121,7 +121,7 @@ bool TextInputModel::MoveCursorToEnd() {
   if (LocationIsAtEnd(state_.selection_base)) {
     return false;
   }
-  MoveCursorToLocation(state_.text.length());
+  MoveCursorToLocation(static_cast<int>(state_.text.length()));
 
   return true;
 }
@@ -171,15 +171,16 @@ bool TextInputModel::MoveCursorUp() {
   // which is a constant to -1. When a line break is found, it includes the line
   // break position. If -1 is returned, it's used to compensate for the missing
   // line break we would otherwise get.
-  int new_location = state_.selection_base - previous_break +
+  int previous_break_int = static_cast<int>(previous_break);
+  int new_location = state_.selection_base - previous_break_int +
                      static_cast<int>(before_previous);
 
   // It is possible that the calculation above results in a new location further
   // from the previous break. e.g. 'aaaaa\na\naaaaa|a' where | is the position
   // of the cursor. The expected behavior would be to move to the end of the
   // previous line.
-  if (new_location > static_cast<int>(previous_break)) {
-    new_location = previous_break;
+  if (new_location > previous_break_int) {
+    new_location = previous_break_int;
   }
   if (new_location < 0) {
     new_location = 0;
@@ -210,17 +211,17 @@ bool TextInputModel::MoveCursorDown() {
   // std::string::npos is a constant to -1. When a line break is found, it
   // includes the line break position. If |previous_break| is npos, it's used to
   // compensate for the missing line break we would otherwise get.
-  int new_location =
-      state_.selection_base - static_cast<int>(previous_break) + next_break;
+  int new_location = state_.selection_base - static_cast<int>(previous_break) +
+                     static_cast<int>(next_break);
 
   // Find the next break to avoid going over more than one line.
   std::size_t further_break = state_.text.find(kLineBreakKey, next_break + 1);
   if (further_break != std::string::npos &&
       new_location > static_cast<int>(further_break)) {
-    new_location = further_break;
+    new_location = static_cast<int>(further_break);
   }
   if (LocationIsAtEnd(new_location)) {
-    new_location = state_.text.length();
+    new_location = static_cast<int>(state_.text.length());
   }
 
   MoveCursorToLocation(new_location);

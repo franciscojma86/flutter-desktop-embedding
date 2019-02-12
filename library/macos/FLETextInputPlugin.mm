@@ -20,8 +20,8 @@
 
 #include "library/common/internal/text_input_model.h"
 
-#include <map>
 #include <iostream>
+#include <map>
 #include <memory>
 
 static NSString *const kTextInputChannel = @"flutter/textinput";
@@ -129,8 +129,7 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
   flutter_desktop_embedding::State new_state;
   NSString *text = dict[kTextKey];
   if (!text) {
-    throw std::invalid_argument(
-                                "Set editing state has been invoked, but without text.");
+    throw std::invalid_argument("Set editing state has been invoked, but without text.");
   }
   new_state.text = [text UTF8String];
 
@@ -145,10 +144,10 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
   NSNumber *composing_base = dict[kComposingBaseKey];
   NSNumber *composing_extent = dict[kComposingExtentKey];
 
-
   new_state.composing_base = composing_base ? [composing_base intValue] : new_state.composing_base;
 
-  new_state.composing_extent = composing_extent ? [composing_extent intValue] : new_state.composing_extent;
+  new_state.composing_extent =
+      composing_extent ? [composing_extent intValue] : new_state.composing_extent;
 
   NSString *text_affinity = dict[kSelectionAffinityKey];
   new_state.text_affinity = text_affinity ? [text_affinity UTF8String] : kTextAffinityDownstream;
@@ -158,22 +157,21 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
 
 - (NSDictionary *)dictFromState:(flutter_desktop_embedding::State)state {
   std::string affinity = state.text_affinity.compare(kTextAffinityUpstream) == 0
-  ? kTextAffinityUpstream
-  : kTextAffinityDownstream;
+                             ? kTextAffinityUpstream
+                             : kTextAffinityDownstream;
   NSString *affinityString = [NSString stringWithCString:affinity.c_str()
                                                 encoding:[NSString defaultCStringEncoding]];
   return @{
-           kComposingBaseKey:  [NSNumber numberWithInt:state.composing_base],
-           kComposingExtentKey: [NSNumber numberWithInt:state.composing_extent],
-           kSelectionAffinityKey: affinityString,
-           kSelectionBaseKey:  [NSNumber numberWithInt:state.selection_base],
-           kSelectionExtentKey: [NSNumber numberWithInt:state.selection_extent],
-           kSelectionIsDirectionalKey: @NO,
-           kTextKey : [NSString stringWithCString:state.text.c_str()
-                                         encoding:[NSString defaultCStringEncoding]]
-           };
+    kComposingBaseKey : [NSNumber numberWithInt:state.composing_base],
+    kComposingExtentKey : [NSNumber numberWithInt:state.composing_extent],
+    kSelectionAffinityKey : affinityString,
+    kSelectionBaseKey : [NSNumber numberWithInt:state.selection_base],
+    kSelectionExtentKey : [NSNumber numberWithInt:state.selection_extent],
+    kSelectionIsDirectionalKey : @NO,
+    kTextKey : [NSString stringWithCString:state.text.c_str()
+                                  encoding:[NSString defaultCStringEncoding]]
+  };
 }
-
 
 - (void)handleMethodCall:(FLEMethodCall *)call result:(FLEMethodResult)result {
   BOOL handled = YES;
@@ -195,7 +193,8 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
       NSDictionary *inputTypeInfo = client_config[kTextInputType];
       NSString *inputType = inputTypeInfo[kTextInputTypeName];
       NSString *inputAction = client_config[kTextInputAction];
-      model = new flutter_desktop_embedding::TextInputModel([inputType UTF8String], [inputAction UTF8String]);
+      model = new flutter_desktop_embedding::TextInputModel([inputType UTF8String],
+                                                            [inputAction UTF8String]);
 
       FLETextInputModel *inputModel =
           [[FLETextInputModel alloc] initWithClientID:clientID configuration:call.arguments[1]];
@@ -238,11 +237,10 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
   }
   NSDictionary *d = [self dictFromState:model->GetState()];
 
-  [_channel invokeMethod:kUpdateEditStateResponseMethod
-               arguments:@[ _activeClientID, d ]];
+  [_channel invokeMethod:kUpdateEditStateResponseMethod arguments:@[ _activeClientID, d ]];
 
-//  [_channel invokeMethod:kUpdateEditStateResponseMethod
-//               arguments:@[ _activeClientID, _textInputModels[_activeClientID].state ]];
+  //  [_channel invokeMethod:kUpdateEditStateResponseMethod
+  //               arguments:@[ _activeClientID, _textInputModels[_activeClientID].state ]];
 }
 
 #pragma mark -
@@ -368,9 +366,9 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
   model->InsertNewLine();
   std::cout << std::endl;
   [self updateEditState];
-//  if ([self.activeModel.inputType isEqualToString:kMultilineInputType]) {
-//    [self insertText:@"\n" replacementRange:self.activeModel.selectedRange];
-//  }
+  //  if ([self.activeModel.inputType isEqualToString:kMultilineInputType]) {
+  //    [self insertText:@"\n" replacementRange:self.activeModel.selectedRange];
+  //  }
   [_channel invokeMethod:kPerformAction
                arguments:@[ _activeClientID, self.activeModel.inputAction ]];
 }
