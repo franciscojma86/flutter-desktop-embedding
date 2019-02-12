@@ -24,6 +24,16 @@ extern "C" {
 
 namespace flutter_desktop_embedding {
 
+struct Model {
+  std::string text_ = "";
+  std::string text_affinity_ = "";
+  bool isDirectional = false;
+  int selection_base_ = -1;
+  int selection_extent_ = -1;
+  int composing_base_ = -1;
+  int composing_extent_ = -1;
+};
+
 // Handles underlying text input state, using a simple ASCII model.
 //
 // Ignores special states like "insert mode" for now.
@@ -32,8 +42,13 @@ class TextInputModel {
   // Constructor for TextInputModel. An exception is thrown if
   // the |config| JSON contains bad arguments.
   explicit TextInputModel(const Json::Value &config);
+  explicit TextInputModel(const std::string input_type,
+                          const std::string input_action);
   virtual ~TextInputModel();
-
+  
+  Model GetModel() const;
+  void ReplaceModel(Model model);
+  
   // Attempts to set the text state.
   //
   // Returns false if the state is not valid (base or extent are out of
@@ -116,20 +131,16 @@ class TextInputModel {
 
   // An action requested by the user on the input client. See available options:
   // https://docs.flutter.io/flutter/services/TextInputAction-class.html
-  std::string input_action();
+  std::string input_action() const;
 
  private:
   bool MoveCursorToLocation(int location);
   bool EraseSelected();
+  Model model_;
 
-  std::string text_;
   std::string input_type_;
   std::string input_action_;
-  int selection_base_ = 0;
-  int selection_extent_ = 0;
-  int composing_base_ = 0;
-  int composing_extent_ = 0;
-  std::string text_affinity_;
+  
 };
 
 }  // namespace flutter_desktop_embedding
