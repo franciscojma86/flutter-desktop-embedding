@@ -26,7 +26,7 @@ namespace flutter_desktop_embedding {
 
 struct State {
   std::string text = "";
-  std::string text_affinity= "";
+  std::string text_affinity = "";
   bool isDirectional = false;
   int selection_base = -1;
   int selection_extent = -1;
