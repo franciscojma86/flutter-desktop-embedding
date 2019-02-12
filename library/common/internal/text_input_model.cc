@@ -15,24 +15,6 @@
 
 #include <iostream>
 
-// Client config  keys.
-static constexpr char kTextInputAction[] = "inputAction";
-static constexpr char kTextInputType[] = "inputType";
-static constexpr char kTextInputTypeName[] = "name";
-
-// Text affinity options keys.
-static constexpr char kTextAffinityDownstream[] = "TextAffinity.downstream";
-static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
-
-// State keys.
-static constexpr char kComposingBaseKey[] = "composingBase";
-static constexpr char kComposingExtentKey[] = "composingExtent";
-static constexpr char kSelectionBaseKey[] = "selectionBase";
-static constexpr char kSelectionExtentKey[] = "selectionExtent";
-static constexpr char kSelectionAffinityKey[] = "selectionAffinity";
-static constexpr char kSelectionIsDirectionalKey[] = "selectionIsDirectional";
-static constexpr char kTextKey[] = "text";
-
 // InputType keys.
 // https://docs.flutter.io/flutter/services/TextInputType-class.html
 static constexpr char kMultilineInputType[] = "TextInputType.multiline";
@@ -41,54 +23,19 @@ static constexpr char kLineBreakKey = '\n';
 
 namespace flutter_desktop_embedding {
 
-Model TextInputModel::GetModel() const { return model_; }
-
-void TextInputModel::ReplaceModel(Model model) { model_ = model; }
-
-bool LocationIsAtEnd(int location, std::string text) {
-  return (location == static_cast<int>(text.length()));
-}
-
-bool LocationIsAtBeginning(int location) { return (location == 0); }
-
-TextInputModel::TextInputModel(const Json::Value &config) {
-  // Use/inspect more arguments as needed. input_type and input_action should
-  // always be present.
-  std::string input_action = config[kTextInputAction].asString();
-  Json::Value input_type_info = config[kTextInputType];
-  std::string input_type = input_type_info[kTextInputTypeName].asString();
-  if (input_action.empty() || input_type.empty()) {
-    throw std::invalid_argument("Missing arguments input_action or input_type");
-  }
-  input_type_ = input_type;
-  input_action_ = input_action;
-}
-
 TextInputModel::TextInputModel(std::string input_type, std::string input_action)
     : input_type_(input_type), input_action_(input_action) {}
 
 TextInputModel::~TextInputModel() {}
 
-Json::Value TextInputModel::GetEditingState() const {
-  Json::Value editing_state;
-  editing_state[kComposingBaseKey] = model_.composing_base_;
-  editing_state[kComposingExtentKey] = model_.composing_extent_;
-  editing_state[kSelectionAffinityKey] =
-      model_.text_affinity_.compare(kTextAffinityUpstream) == 0
-          ? kTextAffinityUpstream
-          : kTextAffinityDownstream;
-  editing_state[kSelectionBaseKey] = model_.selection_base_;
-  editing_state[kSelectionExtentKey] = model_.selection_extent_;
-  editing_state[kSelectionIsDirectionalKey] = false;
-  editing_state[kTextKey] = model_.text_;
+State TextInputModel::GetState() const { return state_; }
 
-  return editing_state;
-}
+void TextInputModel::UpdateState(State state) { state_ = state; }
 
 void TextInputModel::ReplaceString(std::string string, int location = 0,
                                    int length = 0) {
   EraseSelected();
-  model_.text_.replace(location, length, string);
+  state_.text.replace(location, length, string);
   MoveCursorToLocation(location + string.length());
 }
 void TextInputModel::AddCharacter(char c) {
@@ -98,17 +45,17 @@ void TextInputModel::AddCharacter(char c) {
 
 void TextInputModel::AddString(std::string string) {
   EraseSelected();
-  model_.text_.insert(model_.selection_base_, string);
-  MoveCursorToLocation(++model_.selection_base_);
+  state_.text.insert(state_.selection_base, string);
+  MoveCursorToLocation(++state_.selection_base);
 }
 
 bool TextInputModel::EraseSelected() {
-  if (model_.selection_base_ == model_.selection_extent_) {
+  if (state_.selection_base == state_.selection_extent) {
     return false;
   }
-  int base = std::min(model_.selection_base_, model_.selection_extent_);
-  int extent = std::max(model_.selection_base_, model_.selection_extent_);
-  model_.text_.erase(base, extent);
+  int base = std::min(state_.selection_base, state_.selection_extent);
+  int extent = std::max(state_.selection_base, state_.selection_extent);
+  state_.text.erase(base, extent);
   MoveCursorToLocation(base);
   return true;
 }
@@ -118,11 +65,11 @@ bool TextInputModel::Backspace() {
   if (EraseSelected()) {
     return true;
   }
-  if (model_.selection_base_ == 0) {
+  if (state_.selection_base == 0) {
     return false;
   }
-  model_.text_.erase(model_.selection_base_ - 1, 1);
-  MoveCursorToLocation(--model_.selection_base_);
+  state_.text.erase(state_.selection_base - 1, 1);
+  MoveCursorToLocation(--state_.selection_base);
 
   return true;
 }
@@ -132,29 +79,37 @@ bool TextInputModel::Delete() {
   if (EraseSelected()) {
     return true;
   }
-  if (model_.selection_base_ == static_cast<int>(model_.text_.length())) {
+  if (state_.selection_base == static_cast<int>(state_.text.length())) {
     return false;
   }
-  model_.text_.erase(model_.selection_base_, 1);
+  state_.text.erase(state_.selection_base, 1);
 
   return true;
 }
 
+bool TextInputModel::LocationIsAtEnd(int location) {
+  return (location == static_cast<int>(state_.text.length()));
+}
+
+bool TextInputModel::LocationIsAtBeginning(int location) {
+  return (location == 0);
+}
+
 bool TextInputModel::MoveCursorToLocation(int location) {
-  if (location == model_.selection_base_ &&
-      location == model_.selection_extent_) {
+  if (location == state_.selection_base &&
+      location == state_.selection_extent) {
     return false;
   }
-  if (location > static_cast<int>(model_.text_.length()) || location < 0) {
+  if (location > static_cast<int>(state_.text.length()) || location < 0) {
     return false;
   }
-  model_.selection_base_ = location;
-  model_.selection_extent_ = location;
+  state_.selection_base = location;
+  state_.selection_extent = location;
   return true;
 }
 
 bool TextInputModel::MoveCursorToBeginning() {
-  if (LocationIsAtBeginning(model_.selection_base_)) {
+  if (LocationIsAtBeginning(state_.selection_base)) {
     return false;
   }
   MoveCursorToLocation(0);
@@ -163,28 +118,28 @@ bool TextInputModel::MoveCursorToBeginning() {
 }
 
 bool TextInputModel::MoveCursorToEnd() {
-  if (LocationIsAtEnd(model_.selection_base_, model_.text_)) {
+  if (LocationIsAtEnd(state_.selection_base)) {
     return false;
   }
-  MoveCursorToLocation(model_.text_.length());
+  MoveCursorToLocation(state_.text.length());
 
   return true;
 }
 
 bool TextInputModel::MoveCursorForward() {
-  if (LocationIsAtEnd(model_.selection_base_, model_.text_)) {
+  if (LocationIsAtEnd(state_.selection_base)) {
     return false;
   }
-  MoveCursorToLocation(++model_.selection_base_);
+  MoveCursorToLocation(++state_.selection_base);
 
   return true;
 }
 
 bool TextInputModel::MoveCursorBack() {
-  if (LocationIsAtBeginning(model_.selection_base_)) {
+  if (LocationIsAtBeginning(state_.selection_base)) {
     return false;
   }
-  MoveCursorToLocation(--model_.selection_base_);
+  MoveCursorToLocation(--state_.selection_base);
 
   return true;
 }
@@ -194,14 +149,14 @@ bool TextInputModel::MoveCursorUp() {
   // Trying to find a line break before position 0 will find the last line
   // break, which is undesired behavior.
   if (input_type_ != kMultilineInputType ||
-      LocationIsAtBeginning(model_.selection_base_)) {
+      LocationIsAtBeginning(state_.selection_base)) {
     return false;
   }
 
   // rfind will get the line break before or at the given location. Substract 1
   // to avoid finding the line break the cursor is standing on.
   std::size_t previous_break =
-      model_.text_.rfind(kLineBreakKey, model_.selection_base_ - 1);
+      state_.text.rfind(kLineBreakKey, state_.selection_base - 1);
   if (previous_break == std::string::npos) {
     return false;
   }
@@ -209,14 +164,14 @@ bool TextInputModel::MoveCursorUp() {
   // helps in the calculation to adjust the cursor to the previous line break,
   // in case there are more than one.
   std::size_t before_previous =
-      model_.text_.rfind(kLineBreakKey, previous_break - 1);
+      state_.text.rfind(kLineBreakKey, previous_break - 1);
 
   // |before_previous| will return an unsigned int with the position of the
   // character found. If none is found, std::string::npos is returned,
   // which is a constant to -1. When a line break is found, it includes the line
   // break position. If -1 is returned, it's used to compensate for the missing
   // line break we would otherwise get.
-  int new_location = model_.selection_base_ - previous_break +
+  int new_location = state_.selection_base - previous_break +
                      static_cast<int>(before_previous);
 
   // It is possible that the calculation above results in a new location further
@@ -236,36 +191,36 @@ bool TextInputModel::MoveCursorUp() {
 bool TextInputModel::MoveCursorDown() {
   // Only perform for multiline models.
   if (input_type_ != kMultilineInputType ||
-      LocationIsAtEnd(model_.selection_base_, model_.text_))
+      LocationIsAtEnd(state_.selection_base))
     return false;
 
   std::size_t next_break =
-      model_.text_.find(kLineBreakKey, model_.selection_base_);
+      state_.text.find(kLineBreakKey, state_.selection_base);
   if (next_break == std::string::npos) {
     // No need to continue if there's no new line below.
     return false;
   }
   std::size_t previous_break = std::string::npos;
-  if (!LocationIsAtBeginning(model_.selection_base_)) {
+  if (!LocationIsAtBeginning(state_.selection_base)) {
     // Avoid looking for line break before position -1.
     previous_break =
-        model_.text_.rfind(kLineBreakKey, model_.selection_base_ - 1);
+        state_.text.rfind(kLineBreakKey, state_.selection_base - 1);
   }
 
   // std::string::npos is a constant to -1. When a line break is found, it
   // includes the line break position. If |previous_break| is npos, it's used to
   // compensate for the missing line break we would otherwise get.
   int new_location =
-      model_.selection_base_ - static_cast<int>(previous_break) + next_break;
+      state_.selection_base - static_cast<int>(previous_break) + next_break;
 
   // Find the next break to avoid going over more than one line.
-  std::size_t further_break = model_.text_.find(kLineBreakKey, next_break + 1);
+  std::size_t further_break = state_.text.find(kLineBreakKey, next_break + 1);
   if (further_break != std::string::npos &&
       new_location > static_cast<int>(further_break)) {
     new_location = further_break;
   }
-  if (LocationIsAtEnd(new_location, model_.text_)) {
-    new_location = model_.text_.length();
+  if (LocationIsAtEnd(new_location)) {
+    new_location = state_.text.length();
   }
 
   MoveCursorToLocation(new_location);

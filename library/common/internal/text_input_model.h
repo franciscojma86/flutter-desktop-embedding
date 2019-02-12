@@ -24,14 +24,14 @@ extern "C" {
 
 namespace flutter_desktop_embedding {
 
-struct Model {
-  std::string text_ = "";
-  std::string text_affinity_ = "";
+struct State {
+  std::string text = "";
+  std::string text_affinity= "";
   bool isDirectional = false;
-  int selection_base_ = -1;
-  int selection_extent_ = -1;
-  int composing_base_ = -1;
-  int composing_extent_ = -1;
+  int selection_base = -1;
+  int selection_extent = -1;
+  int composing_base = -1;
+  int composing_extent = -1;
 };
 
 // Handles underlying text input state, using a simple ASCII model.
@@ -39,29 +39,23 @@ struct Model {
 // Ignores special states like "insert mode" for now.
 class TextInputModel {
  public:
-  // Constructor for TextInputModel. An exception is thrown if
-  // the |config| JSON contains bad arguments.
-  explicit TextInputModel(const Json::Value &config);
+  // Constructor for TextInputModel. Keeps track of the client's input type and
+  // action. There are more values that the client can provide. Add more as
+  // needed.
   explicit TextInputModel(const std::string input_type,
                           const std::string input_action);
   virtual ~TextInputModel();
-  
-  Model GetModel() const;
-  void ReplaceModel(Model model);
-  
-  // Attempts to set the text state.
-  //
-  // Returns false if the state is not valid (base or extent are out of
-  // bounds, or base is less than extent).
-  bool SetEditingState(const Json::Value &state);
 
-  // Returns the state in the form of a platform message.
-  Json::Value GetEditingState() const;
+  // Returns the current state.
+  State GetState() const;
+
+  // Replace the current state with a new one.
+  void UpdateState(State state);
 
   // Replaces a section of the stored string with a given |string|. |location|
   // is the starting point where the new string will be added. |length| is the
   // number of characters to be substituted from the stored string, starting
-  // from |location. Deletes any previously selected text.
+  // from |location|. Deletes any previously selected text.
   void ReplaceString(std::string string, int location, int length);
 
   // Adds a character.
@@ -136,11 +130,13 @@ class TextInputModel {
  private:
   bool MoveCursorToLocation(int location);
   bool EraseSelected();
-  Model model_;
+  bool LocationIsAtEnd(int location);
+  bool LocationIsAtBeginning(int location);
+
+  State state_;
 
   std::string input_type_;
   std::string input_action_;
-  
 };
 
 }  // namespace flutter_desktop_embedding
