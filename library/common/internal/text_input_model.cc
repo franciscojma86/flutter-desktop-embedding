@@ -38,6 +38,13 @@ void TextInputModel::ReplaceString(std::string string, int location = 0,
   state_.text.replace(location, length, string);
   MoveCursorToLocation(location + static_cast<int>(string.length()));
 }
+
+void TextInputModel::ReplaceString(std::string string, Range range) {
+  EraseSelected();
+  state_.text.replace(range.location, range.length, string);
+  MoveCursorToLocation(range.location + string.length());
+}
+
 void TextInputModel::AddCharacter(char c) {
   std::string s(1, c);
   AddString(s);
@@ -239,6 +246,14 @@ bool TextInputModel::InsertNewLine() {
 void TextInputModel::MarkText(int location, int length) {
   state_.composing_base = location;
   state_.composing_extent = location + length;
+}
+
+void TextInputModel::MarkText(Range range) {
+  state_.composing = range;
+}
+
+void TextInputModel::SelectText(Range range) {
+  state_.selection = range;
 }
 
 void TextInputModel::SelectText(int location, int length) {

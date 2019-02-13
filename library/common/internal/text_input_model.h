@@ -22,14 +22,21 @@ extern "C" {
 
 namespace flutter_desktop_embedding {
 
+struct Range {
+  unsigned int location = std::string::npos;
+  unsigned int length = 0;
+};
+
 struct State {
   std::string text = "";
   std::string text_affinity = "";
   bool isDirectional = false;
-  int selection_base = -1;
-  int selection_extent = -1;
-  int composing_base = -1;
-  int composing_extent = -1;
+  Range selection;
+  Range composing; 
+  unsigned int selection_base = -1;
+  unsigned int selection_extent = -1;
+  unsigned int composing_base = -1;
+  unsigned int composing_extent = -1;
 };
 
 // Handles underlying text input state, using a simple ASCII model.
@@ -55,7 +62,7 @@ class TextInputModel {
   // number of characters to be substituted from the stored string, starting
   // from |location|. Deletes any previously selected text.
   void ReplaceString(std::string string, int location, int length);
-
+  void ReplaceString(std::string string, Range range);
   // Adds a character.
   //
   // Either appends after the cursor (when selection base and extent are the
@@ -121,7 +128,9 @@ class TextInputModel {
   // Inserts a new line to the text if the |input_type| is multiline.
   bool InsertNewLine();
   void MarkText(int location, int length);
+    void MarkText(Range range);
   void SelectText(int location, int length);
+    void SelectText(Range range);
 
   // An action requested by the user on the input client. See available options:
   // https://docs.flutter.io/flutter/services/TextInputAction-class.html

@@ -154,8 +154,8 @@ State StateFromJson(Json::Value state) {
   if (selection_base.isNull() || selection_extent.isNull()) {
     throw std::invalid_argument("Selection base/extent values invalid.");
   }
-  new_state.selection_base = selection_base.asInt();
-  new_state.selection_extent = selection_extent.asInt();
+  new_state.selection_base = selection_base.asint();
+  new_state.selection_extent = selection_extent.asint();
 
   Json::Value composing_base = state[kComposingBaseKey];
   Json::Value composing_extent = state[kComposingExtentKey];
