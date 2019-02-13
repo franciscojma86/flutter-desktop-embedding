@@ -16,8 +16,6 @@
 
 #include <string>
 
-#include <json/json.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -122,6 +120,8 @@ class TextInputModel {
 
   // Inserts a new line to the text if the |input_type| is multiline.
   bool InsertNewLine();
+  void MarkText(int location, int length);
+  void SelectText(int location, int length);
 
   // An action requested by the user on the input client. See available options:
   // https://docs.flutter.io/flutter/services/TextInputAction-class.html

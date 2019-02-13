@@ -15,10 +15,9 @@
 #import "FLETextInputPlugin.h"
 
 #import "FLEJSONMethodCodec.h"
-#import "FLETextInputModel.h"
 #import "FLEViewController+Internal.h"
 
-#include "library/common/internal/text_input_model.h"
+#include "../common/internal/text_input_model.h"
 
 #include <iostream>
 #include <map>
@@ -59,7 +58,10 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
  * Private properties of FlutterTextInputPlugin.
  */
 @interface FLETextInputPlugin () <NSTextInputClient> {
-  flutter_desktop_embedding::TextInputModel *model;
+  /**
+   * The currently active text input model.
+   */
+  std::unique_ptr<flutter_desktop_embedding::TextInputModel> active_model;
 }
 
 /**
@@ -71,17 +73,13 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
  * A dictionary of text input models, one per client connection, keyed
  * by the client connection ID.
  */
-@property(nonatomic) NSMutableDictionary<NSNumber *, FLETextInputModel *> *textInputModels;
+//@property(nonatomic) NSMutableDictionary<NSNumber *, flutter_desktop_embedding::TextInputModel*>
+//*textInputModels;
 
 /**
  * The currently active client connection ID.
  */
 @property(nonatomic, nullable) NSNumber *activeClientID;
-
-/**
- * The currently active text input model.
- */
-@property(nonatomic, readonly, nullable) FLETextInputModel *activeModel;
 
 /**
  * The channel used to communicate with Flutter.
@@ -113,18 +111,16 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
     [_channel setMethodCallHandler:^(FLEMethodCall *call, FLEMethodResult result) {
       [weakSelf handleMethodCall:call result:result];
     }];
-    _textInputModels = [[NSMutableDictionary alloc] init];
     _textInputContext = [[NSTextInputContext alloc] initWithClient:self];
   }
   return self;
 }
 
 #pragma mark - Private
-
-- (FLETextInputModel *)activeModel {
-  return (_activeClientID == nil) ? nil : _textInputModels[_activeClientID];
-}
-
+/**
+ * Converts an NSDictionary to a State object. Will raise an exception if the dictionary is not
+ * configured properly.
+ */
 - (flutter_desktop_embedding::State)stateFromDict:(NSDictionary *)dict {
   flutter_desktop_embedding::State new_state;
   NSString *text = dict[kTextKey];
@@ -155,6 +151,9 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
   return new_state;
 }
 
+/**
+ * Creates a dictionary from a given State;
+ */
 - (NSDictionary *)dictFromState:(flutter_desktop_embedding::State)state {
   std::string affinity = state.text_affinity.compare(kTextAffinityUpstream) == 0
                              ? kTextAffinityUpstream
@@ -193,18 +192,14 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
       NSDictionary *inputTypeInfo = client_config[kTextInputType];
       NSString *inputType = inputTypeInfo[kTextInputTypeName];
       NSString *inputAction = client_config[kTextInputAction];
-      model = new flutter_desktop_embedding::TextInputModel([inputType UTF8String],
-                                                            [inputAction UTF8String]);
-
-      FLETextInputModel *inputModel =
-          [[FLETextInputModel alloc] initWithClientID:clientID configuration:call.arguments[1]];
-      if (!inputModel) {
+      if (!inputType || !inputAction) {
         result([[FLEMethodError alloc] initWithCode:@"error"
                                             message:@"Failed to create an input model"
                                             details:@"Configuration arguments might be missing"]);
         return;
       }
-      _textInputModels[_activeClientID] = inputModel;
+      active_model = std::make_unique<flutter_desktop_embedding::TextInputModel>(
+          [inputType UTF8String], [inputAction UTF8String]);
     }
   } else if ([method isEqualToString:kShowMethod]) {
     [self.flutterViewController addKeyResponder:self];
@@ -217,10 +212,7 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
   } else if ([method isEqualToString:kSetEditingStateMethod]) {
     NSDictionary *args = call.arguments;
     flutter_desktop_embedding::State state = [self stateFromDict:args];
-    model->UpdateState(state);
-    self.activeModel.state = args;
-    flutter_desktop_embedding::State changed_state = model->GetState();
-    NSLog(@"%@", [self dictFromState:changed_state]);
+    active_model->UpdateState(state);
   } else {
     handled = NO;
     NSLog(@"Unhandled text input method '%@'", method);
@@ -232,15 +224,8 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
  * Informs the Flutter framework of changes to the text input model's state.
  */
 - (void)updateEditState {
-  if (self.activeModel == nil) {
-    return;
-  }
-  NSDictionary *d = [self dictFromState:model->GetState()];
-
-  [_channel invokeMethod:kUpdateEditStateResponseMethod arguments:@[ _activeClientID, d ]];
-
-  //  [_channel invokeMethod:kUpdateEditStateResponseMethod
-  //               arguments:@[ _activeClientID, _textInputModels[_activeClientID].state ]];
+  NSDictionary *state = [self dictFromState:active_model->GetState()];
+  [_channel invokeMethod:kUpdateEditStateResponseMethod arguments:@[ _activeClientID, state ]];
 }
 
 #pragma mark -
@@ -265,92 +250,50 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
  * than the supposedly more RTL-friendly moveForward and moveBackward.
  */
 - (void)moveLeft:(nullable id)sender {
-  model->MoveCursorBack();
-  std::cout << std::endl;
-
-  NSRange selection = self.activeModel.selectedRange;
-  if (selection.length == 0) {
-    if (selection.location > 0) {
-      // Move to previous location
-      self.activeModel.selectedRange = NSMakeRange(selection.location - 1, 0);
-      [self updateEditState];
-    }
-  } else {
-    // Collapse current selection
-    self.activeModel.selectedRange = NSMakeRange(selection.location, 0);
-    [self updateEditState];
-  }
+  active_model->MoveCursorBack();
+  [self updateEditState];
 }
 
 - (void)moveRight:(nullable id)sender {
-  model->MoveCursorForward();
-  std::cout << std::endl;
+  active_model->MoveCursorForward();
+  [self updateEditState];
+}
 
-  NSRange selection = self.activeModel.selectedRange;
-  if (selection.length == 0) {
-    if (selection.location < self.activeModel.text.length) {
-      // Move to next location
-      self.activeModel.selectedRange = NSMakeRange(selection.location + 1, 0);
-      [self updateEditState];
-    }
-  } else {
-    // Collapse current selection
-    self.activeModel.selectedRange = NSMakeRange(selection.location + selection.length, 0);
-    [self updateEditState];
-  }
+- (void)deleteForward:(id)sender {
+  active_model->Delete();
+  [self updateEditState];
 }
 
 - (void)deleteBackward:(id)sender {
-  model->Backspace();
-  std::cout << std::endl;
-
-  NSRange selection = self.activeModel.selectedRange;
-  if (selection.location == 0) return;
-  NSRange range = selection;
-  if (selection.length == 0) {
-    NSUInteger location = (selection.location == NSNotFound) ? self.activeModel.text.length - 1
-                                                             : selection.location - 1;
-    range = NSMakeRange(location, 1);
-  }
-  self.activeModel.selectedRange = NSMakeRange(range.location, 0);
-  [self insertText:@"" replacementRange:range];  // Updates edit state
+  active_model->Backspace();
+  [self updateEditState];
 }
 
 #pragma mark -
 #pragma mark NSTextInputClient
 
 - (void)insertText:(id)string replacementRange:(NSRange)range {
-  model->AddString([string UTF8String]);
-  std::cout << std::endl;
-
-  if (self.activeModel != nil) {
-    if (range.location == NSNotFound && range.length == 0) {
-      // Use selection
-      range = self.activeModel.selectedRange;
-    }
-    if (range.location > self.activeModel.text.length)
-      range.location = self.activeModel.text.length;
-    if (range.length > (self.activeModel.text.length - range.location))
-      range.length = self.activeModel.text.length - range.location;
-    [self.activeModel.text replaceCharactersInRange:range withString:string];
-    self.activeModel.selectedRange = NSMakeRange(range.location + ((NSString *)string).length, 0);
-    [self updateEditState];
+  NSLog(@"IOnsert text %@, %@", string, NSStringFromRange(range));
+  if (range.location == NSNotFound && range.length == 0) {
+    active_model->AddString([string UTF8String]);
+  } else {
+    active_model->ReplaceString([string UTF8String], (int)range.location, (int)range.length);
   }
+  [self updateEditState];
 }
 
 - (void)moveUp:(id)sender {
-  model->MoveCursorUp();
-  std::cout << std::endl;
+  active_model->MoveCursorUp();
   [self updateEditState];
 }
 
 - (void)moveDown:(id)sender {
-  model->MoveCursorDown();
-  std::cout << std::endl;
+  active_model->MoveCursorDown();
   [self updateEditState];
 }
 
 - (void)doCommandBySelector:(SEL)selector {
+  NSLog(@"AAA %@", NSStringFromSelector(selector));
   if ([self respondsToSelector:selector]) {
     // Note: The more obvious [self performSelector...] doesn't give ARC enough information to
     // handle retain semantics properly. See https://stackoverflow.com/questions/7017281/ for more
@@ -363,54 +306,66 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
 }
 
 - (void)insertNewline:(id)sender {
-  model->InsertNewLine();
-  std::cout << std::endl;
+  active_model->InsertNewLine();
   [self updateEditState];
-  //  if ([self.activeModel.inputType isEqualToString:kMultilineInputType]) {
-  //    [self insertText:@"\n" replacementRange:self.activeModel.selectedRange];
-  //  }
-  [_channel invokeMethod:kPerformAction
-               arguments:@[ _activeClientID, self.activeModel.inputAction ]];
+  NSString *action = [NSString stringWithCString:active_model->input_action().c_str()
+                                        encoding:[NSString defaultCStringEncoding]];
+  [_channel invokeMethod:kPerformAction arguments:@[ _activeClientID, action ]];
 }
 
 - (void)setMarkedText:(id)string
         selectedRange:(NSRange)selectedRange
      replacementRange:(NSRange)replacementRange {
-  if (self.activeModel != nil) {
-    [self.activeModel.text replaceCharactersInRange:replacementRange withString:string];
-    self.activeModel.selectedRange = selectedRange;
-    [self updateEditState];
-  }
+  NSLog(@"%@, %@, %@", string, NSStringFromRange(selectedRange),
+        NSStringFromRange(replacementRange));
+//  active_model->MarkText((int)replacementRange.location, (int)replacementRange.length);
+  active_model->ReplaceString([string UTF8String], (int)replacementRange.location, (int)replacementRange.length);
+  active_model->SelectText((int)selectedRange.location, (int)selectedRange.length);
+
+  //  if (self.activeModel != nil) {
+  //    [self.activeModel.text replaceCharactersInRange:replacementRange withString:string];
+  //    self.activeModel.selectedRange = selectedRange;
+  //    [self updateEditState];
+  //  }
 }
 
 - (void)unmarkText {
-  if (self.activeModel != nil) {
-    self.activeModel.markedRange = NSMakeRange(NSNotFound, 0);
-    [self updateEditState];
-  }
+  NSLog(@"Unmark text");
+  //  if (self.activeModel != nil) {
+  //    self.activeModel.markedRange = NSMakeRange(NSNotFound, 0);
+  //    [self updateEditState];
+  //  }
 }
 
 - (NSRange)selectedRange {
-  return (self.activeModel == nil) ? NSMakeRange(NSNotFound, 0) : self.activeModel.selectedRange;
+  NSLog(@"Selected range");
+  return NSMakeRange(NSNotFound, 0);
+  //  return (self.activeModel == nil) ? NSMakeRange(NSNotFound, 0) :
+  //  self.activeModel.selectedRange;
 }
 
 - (NSRange)markedRange {
-  return (self.activeModel == nil) ? NSMakeRange(NSNotFound, 0) : self.activeModel.markedRange;
+  NSLog(@"Marked range");
+  return NSMakeRange(NSNotFound, 0);
+  //  return (self.activeModel == nil) ? NSMakeRange(NSNotFound, 0) : self.activeModel.markedRange;
 }
 
 - (BOOL)hasMarkedText {
-  return (self.activeModel == nil) ? NO : self.activeModel.markedRange.location != NSNotFound;
+  NSLog(@"Has merked text");
+  return NO;
+  //  return (self.activeModel == nil) ? NO : self.activeModel.markedRange.location != NSNotFound;
 }
 
 - (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range
                                                 actualRange:(NSRangePointer)actualRange {
-  if (self.activeModel) {
-    if (actualRange != nil) *actualRange = range;
-    NSString *substring = [self.activeModel.text substringWithRange:range];
-    return [[NSAttributedString alloc] initWithString:substring attributes:nil];
-  } else {
-    return nil;
-  }
+  //  if (self.activeModel) {
+  //    if (actualRange != nil) *actualRange = range;
+  //    NSString *substring = [self.activeModel.text substringWithRange:range];
+  //    return [[NSAttributedString alloc] initWithString:substring attributes:nil];
+  //  } else {
+  //    return nil;
+  //  }
+  return [[NSAttributedString alloc] initWithString:@"" attributes:nil];
 }
 
 - (NSArray<NSString *> *)validAttributesForMarkedText {

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "library/common/internal/text_input_model.h"
+#include "../common/internal/text_input_model.h"
 
 #include <iostream>
 
@@ -127,20 +127,20 @@ bool TextInputModel::MoveCursorToEnd() {
 }
 
 bool TextInputModel::MoveCursorForward() {
+  std::cout << state_.selection_base;
   if (LocationIsAtEnd(state_.selection_base)) {
     return false;
   }
   MoveCursorToLocation(++state_.selection_base);
-
   return true;
 }
 
 bool TextInputModel::MoveCursorBack() {
+  std::cout << state_.selection_base;
   if (LocationIsAtBeginning(state_.selection_base)) {
     return false;
   }
   MoveCursorToLocation(--state_.selection_base);
-
   return true;
 }
 
@@ -234,6 +234,16 @@ bool TextInputModel::InsertNewLine() {
   }
   AddCharacter(kLineBreakKey);
   return true;
+}
+
+void TextInputModel::MarkText(int location, int length) {
+  state_.composing_base = location;
+  state_.composing_extent = location + length;
+}
+
+void TextInputModel::SelectText(int location, int length) {
+  state_.selection_base = location;
+  state_.selection_extent = location + length;
 }
 
 std::string TextInputModel::input_action() const { return input_action_; }
