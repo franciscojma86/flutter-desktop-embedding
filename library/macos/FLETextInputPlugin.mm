@@ -134,16 +134,15 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
   if (!selection_base || !selection_extent) {
     throw std::invalid_argument("Selection base/extent values invalid.");
   }
-  new_state.selection_base = [selection_base intValue];
-  new_state.selection_extent = [selection_extent intValue];
+  new_state.selection.begin = [selection_base unsignedLongValue];
+  new_state.selection.end = [selection_extent unsignedLongValue];
 
   NSNumber *composing_base = dict[kComposingBaseKey];
   NSNumber *composing_extent = dict[kComposingExtentKey];
 
-  new_state.composing_base = composing_base ? [composing_base intValue] : new_state.composing_base;
-
-  new_state.composing_extent =
-      composing_extent ? [composing_extent intValue] : new_state.composing_extent;
+  new_state.composing.begin = composing_base ? [composing_base unsignedLongValue] : new_state.selection.begin;
+  new_state.composing.end =
+      composing_extent ? [composing_extent unsignedLongValue] : new_state.selection.end;
 
   NSString *text_affinity = dict[kSelectionAffinityKey];
   new_state.text_affinity = text_affinity ? [text_affinity UTF8String] : kTextAffinityDownstream;
@@ -160,16 +159,35 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
                              : kTextAffinityDownstream;
   NSString *affinityString = [NSString stringWithCString:affinity.c_str()
                                                 encoding:[NSString defaultCStringEncoding]];
+  NSNumber *composingBase = state.composing.begin == std::string::npos ? @-1 : @(state.composing.begin);
+  NSNumber *composingExtent = state.composing.end == std::string::npos ? @-1 : @(state.composing.end);
+  NSNumber *selectionBase = state.selection.begin == std::string::npos ? @-1 : @(state.selection.begin);
+  NSNumber *selectionExtent = state.selection.end == std::string::npos ? @-1 : @(state.selection.end);
   return @{
-    kComposingBaseKey : [NSNumber numberWithInt:state.composing_base],
-    kComposingExtentKey : [NSNumber numberWithInt:state.composing_extent],
+    kComposingBaseKey : composingBase,
+    kComposingExtentKey : composingExtent,
     kSelectionAffinityKey : affinityString,
-    kSelectionBaseKey : [NSNumber numberWithInt:state.selection_base],
-    kSelectionExtentKey : [NSNumber numberWithInt:state.selection_extent],
+    kSelectionBaseKey : selectionBase,
+    kSelectionExtentKey : selectionExtent,
     kSelectionIsDirectionalKey : @NO,
     kTextKey : [NSString stringWithCString:state.text.c_str()
                                   encoding:[NSString defaultCStringEncoding]]
   };
+}
+
+- (flutter_desktop_embedding::Range)rangeFromNSRange:(NSRange)range {
+  flutter_desktop_embedding::Range new_range;
+  if (range.location == NSNotFound) {
+    new_range.begin = std::string::npos;
+  } else {
+    new_range.begin = range.location;
+  }
+  new_range.end = range.location + range.length;
+  return new_range;
+}
+
+- (NSRange)NSRangeFromRange:(flutter_desktop_embedding::Range)range {
+  return NSMakeRange(range.begin, range.end - range.begin);
 }
 
 - (void)handleMethodCall:(FLEMethodCall *)call result:(FLEMethodResult)result {
@@ -273,11 +291,10 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
 #pragma mark NSTextInputClient
 
 - (void)insertText:(id)string replacementRange:(NSRange)range {
-  NSLog(@"IOnsert text %@, %@", string, NSStringFromRange(range));
   if (range.location == NSNotFound && range.length == 0) {
     active_model->AddString([string UTF8String]);
   } else {
-    active_model->ReplaceString([string UTF8String], (int)range.location, (int)range.length);
+    active_model->ReplaceString([string UTF8String], [self rangeFromNSRange:range]);
   }
   [self updateEditState];
 }
@@ -293,7 +310,6 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
 }
 
 - (void)doCommandBySelector:(SEL)selector {
-  NSLog(@"AAA %@", NSStringFromSelector(selector));
   if ([self respondsToSelector:selector]) {
     // Note: The more obvious [self performSelector...] doesn't give ARC enough information to
     // handle retain semantics properly. See https://stackoverflow.com/questions/7017281/ for more
@@ -318,42 +334,29 @@ static constexpr char kTextAffinityUpstream[] = "TextAffinity.upstream";
      replacementRange:(NSRange)replacementRange {
   NSLog(@"%@, %@, %@", string, NSStringFromRange(selectedRange),
         NSStringFromRange(replacementRange));
-//  active_model->MarkText((int)replacementRange.location, (int)replacementRange.length);
-  active_model->ReplaceString([string UTF8String], (int)replacementRange.location, (int)replacementRange.length);
-  active_model->SelectText((int)selectedRange.location, (int)selectedRange.length);
-
-  //  if (self.activeModel != nil) {
-  //    [self.activeModel.text replaceCharactersInRange:replacementRange withString:string];
-  //    self.activeModel.selectedRange = selectedRange;
-  //    [self updateEditState];
-  //  }
+    active_model->ReplaceString([string UTF8String], [self rangeFromNSRange:replacementRange]);
+  active_model->SelectText([self rangeFromNSRange:selectedRange]);
+  [self updateEditState];
 }
 
 - (void)unmarkText {
-  NSLog(@"Unmark text");
-  //  if (self.activeModel != nil) {
-  //    self.activeModel.markedRange = NSMakeRange(NSNotFound, 0);
-  //    [self updateEditState];
-  //  }
+  flutter_desktop_embedding::Range range;
+  range.begin = std::string::npos;
+  range.end = std::string::npos;
+  active_model->MarkText(range);
 }
 
 - (NSRange)selectedRange {
-  NSLog(@"Selected range");
-  return NSMakeRange(NSNotFound, 0);
-  //  return (self.activeModel == nil) ? NSMakeRange(NSNotFound, 0) :
-  //  self.activeModel.selectedRange;
+    return [self NSRangeFromRange:active_model->GetState().selection];
 }
 
 - (NSRange)markedRange {
-  NSLog(@"Marked range");
-  return NSMakeRange(NSNotFound, 0);
-  //  return (self.activeModel == nil) ? NSMakeRange(NSNotFound, 0) : self.activeModel.markedRange;
+  return [self NSRangeFromRange:active_model->GetState().composing];
 }
 
 - (BOOL)hasMarkedText {
-  NSLog(@"Has merked text");
-  return NO;
-  //  return (self.activeModel == nil) ? NO : self.activeModel.markedRange.location != NSNotFound;
+  flutter_desktop_embedding::State state = active_model->GetState();
+  return (state.composing.begin != std::string::npos && state.composing.end != std::string::npos);
 }
 
 - (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range

@@ -23,8 +23,8 @@ extern "C" {
 namespace flutter_desktop_embedding {
 
 struct Range {
-  unsigned int location = std::string::npos;
-  unsigned int length = 0;
+  size_t begin = std::string::npos;
+  size_t end = std::string::npos;
 };
 
 struct State {
@@ -32,11 +32,7 @@ struct State {
   std::string text_affinity = "";
   bool isDirectional = false;
   Range selection;
-  Range composing; 
-  unsigned int selection_base = -1;
-  unsigned int selection_extent = -1;
-  unsigned int composing_base = -1;
-  unsigned int composing_extent = -1;
+  Range composing;
 };
 
 // Handles underlying text input state, using a simple ASCII model.
@@ -61,7 +57,6 @@ class TextInputModel {
   // is the starting point where the new string will be added. |length| is the
   // number of characters to be substituted from the stored string, starting
   // from |location|. Deletes any previously selected text.
-  void ReplaceString(std::string string, int location, int length);
   void ReplaceString(std::string string, Range range);
   // Adds a character.
   //
@@ -127,20 +122,18 @@ class TextInputModel {
 
   // Inserts a new line to the text if the |input_type| is multiline.
   bool InsertNewLine();
-  void MarkText(int location, int length);
-    void MarkText(Range range);
-  void SelectText(int location, int length);
-    void SelectText(Range range);
+  void MarkText(Range range);
+  void SelectText(Range range);
 
   // An action requested by the user on the input client. See available options:
   // https://docs.flutter.io/flutter/services/TextInputAction-class.html
   std::string input_action() const;
 
  private:
-  bool MoveCursorToLocation(int location);
+  bool MoveCursorToLocation(size_t location);
   bool EraseSelected();
-  bool LocationIsAtEnd(int location);
-  bool LocationIsAtBeginning(int location);
+  bool LocationIsAtEnd(size_t location);
+  bool LocationIsAtBeginning(size_t location);
 
   State state_;
 
